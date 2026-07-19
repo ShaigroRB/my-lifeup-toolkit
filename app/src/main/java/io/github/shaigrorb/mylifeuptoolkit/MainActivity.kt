@@ -1,20 +1,29 @@
 package io.github.shaigrorb.mylifeuptoolkit
 
 import android.os.Bundle
-import androidx.activity.enableEdgeToEdge
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+
+import io.github.shaigrorb.mylifeuptoolkit.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
+    private lateinit var binding: ActivityMainBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContentView(R.layout.activity_main)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        binding.itemBulkComplete.setOnClickListener {
+            // TODO: replace with an Intent to BulkCompleteActivity once that screen exists
+            Toast.makeText(this, "Bulk Complete Tasks — not built yet", Toast.LENGTH_SHORT).show()
         }
+
+        binding.itemAchievementTemplates.setOnClickListener {
+            // TODO: replace with an Intent to AchievementTemplateActivity once that screen exists
+            Toast.makeText(this, "Achievement Templates — not built yet", Toast.LENGTH_SHORT).show()
+        }
+
+        // itemStats is intentionally not clickable (see activity_main.xml) — no listener needed yet.
     }
 }
