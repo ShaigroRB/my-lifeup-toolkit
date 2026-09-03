@@ -16,7 +16,14 @@ class MainActivity : AppCompatActivity() {
 
         binding.itemBulkComplete.setOnClickListener {
             // TODO: replace with an Intent to BulkCompleteActivity once that screen exists
-            Toast.makeText(this, "Bulk Complete Tasks — not built yet", Toast.LENGTH_SHORT).show()
+            // Toast.makeText(this, "Bulk Complete Tasks — not built yet", Toast.LENGTH_SHORT).show()
+
+            if (!LifeUpBridge.isInstalled(this)) {
+                Toast.makeText(this, "LifeUp not installed", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            // First run only: grant permission, then re-tap after approving in LifeUp
+            LifeUpBridge.requestContentProviderPermission(this, "My LifeUp Toolkit")
         }
 
         binding.itemAchievementTemplates.setOnClickListener {
