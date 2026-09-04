@@ -1,5 +1,6 @@
 package io.github.shaigrorb.mylifeuptoolkit
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -15,15 +16,11 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         binding.itemBulkComplete.setOnClickListener {
-            // TODO: replace with an Intent to BulkCompleteActivity once that screen exists
-            // Toast.makeText(this, "Bulk Complete Tasks — not built yet", Toast.LENGTH_SHORT).show()
-
             if (!LifeUpBridge.isInstalled(this)) {
                 Toast.makeText(this, "LifeUp not installed", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            // First run only: grant permission, then re-tap after approving in LifeUp
-            LifeUpBridge.requestContentProviderPermission(this, "My LifeUp Toolkit")
+            startActivity(Intent(this, BulkCompleteActivity::class.java))
         }
 
         binding.itemAchievementTemplates.setOnClickListener {
