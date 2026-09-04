@@ -2,9 +2,8 @@ package io.github.shaigrorb.mylifeuptoolkit
 
 import java.util.UUID
 
-data class TaskProfile(
+data class TaskShortcut(
     val label: String,
-    val gid: Long,
-    val shortcuts: List<TaskShortcut> = emptyList(),
+    val count: Int,
     val id: String = UUID.randomUUID().toString()
 )

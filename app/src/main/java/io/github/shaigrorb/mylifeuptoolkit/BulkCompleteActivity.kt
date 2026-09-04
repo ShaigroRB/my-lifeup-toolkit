@@ -10,9 +10,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import io.github.shaigrorb.mylifeuptoolkit.databinding.ActivityBulkCompleteBinding
 import io.github.shaigrorb.mylifeuptoolkit.databinding.DialogAddProfileBinding
+import io.github.shaigrorb.mylifeuptoolkit.databinding.DialogAddShortcutBinding
 import io.github.shaigrorb.mylifeuptoolkit.databinding.DialogCountInputBinding
 import io.github.shaigrorb.mylifeuptoolkit.databinding.DialogProgressBinding
 import io.github.shaigrorb.mylifeuptoolkit.databinding.ItemTaskProfileBinding
+import io.github.shaigrorb.mylifeuptoolkit.databinding.ItemTaskShortcutBinding
 
 class BulkCompleteActivity : AppCompatActivity() {
 
@@ -41,8 +43,23 @@ class BulkCompleteActivity : AppCompatActivity() {
             row.profileLabel.text = profile.label
             row.profileGid.text = "gid: ${profile.gid}"
             row.profileRowClickArea.setOnClickListener { showCountDialog(profile) }
+            row.addShortcutButton.setOnClickListener { showAddShortcutDialog(profile) }
             row.removeProfileButton.setOnClickListener { confirmRemoveProfile(profile) }
             binding.profileListContainer.addView(row.root)
+
+            profile.shortcuts.forEach { shortcut ->
+                val shortcutRow = ItemTaskShortcutBinding.inflate(
+                    LayoutInflater.from(this), binding.profileListContainer, false
+                )
+                shortcutRow.shortcutLabel.text = "${shortcut.label} (${shortcut.count}x)"
+                shortcutRow.shortcutLabel.setOnClickListener {
+                    runBulkComplete(profile.gid, shortcut.label, shortcut.count)
+                }
+                shortcutRow.removeShortcutButton.setOnClickListener {
+                    confirmRemoveShortcut(profile, shortcut)
+                }
+                binding.profileListContainer.addView(shortcutRow.root)
+            }
         }
     }
 
@@ -87,13 +104,43 @@ class BulkCompleteActivity : AppCompatActivity() {
                     Toast.makeText(this, "Enter a count of 1 or more", Toast.LENGTH_SHORT).show()
                     return@setPositiveButton
                 }
-                runBulkComplete(profile, count)
+                runBulkComplete(profile.gid, profile.label, count)
             }
             .setNegativeButton("Cancel", null)
             .show()
     }
 
-    private fun runBulkComplete(profile: TaskProfile, count: Int) {
+    private fun showAddShortcutDialog(profile: TaskProfile) {
+        val dialogBinding = DialogAddShortcutBinding.inflate(layoutInflater)
+        AlertDialog.Builder(this)
+            .setTitle("Add shortcut for \"${profile.label}\"")
+            .setView(dialogBinding.root)
+            .setPositiveButton("Save") { _, _ ->
+                val label = dialogBinding.shortcutLabelInput.text?.toString()?.trim().orEmpty()
+                val count = dialogBinding.shortcutCountInput.text?.toString()?.trim()?.toIntOrNull()
+                if (label.isEmpty() || count == null || count < 1) {
+                    Toast.makeText(this, "Enter a name and a count of 1 or more", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                TaskProfileStore.addShortcut(this, profile.id, TaskShortcut(label, count))
+                renderProfileList()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun confirmRemoveShortcut(profile: TaskProfile, shortcut: TaskShortcut) {
+        AlertDialog.Builder(this)
+            .setTitle("Remove shortcut \"${shortcut.label}\"?")
+            .setPositiveButton("Remove") { _, _ ->
+                TaskProfileStore.removeShortcut(this, profile.id, shortcut.id)
+                renderProfileList()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun runBulkComplete(gid: Long, title: String, count: Int) {
         val progressBinding = DialogProgressBinding.inflate(layoutInflater)
         progressBinding.progressBar.max = count
         progressBinding.progressText.text = "Completing 0 / $count..."
@@ -101,7 +148,7 @@ class BulkCompleteActivity : AppCompatActivity() {
         val stopRequested = AtomicBoolean(false)
 
         val progressDialog = AlertDialog.Builder(this)
-            .setTitle(profile.label)
+            .setTitle(title)
             .setView(progressBinding.root)
             .setCancelable(false)
             .setNegativeButton("Stop") { _, _ -> stopRequested.set(true) }
@@ -113,7 +160,7 @@ class BulkCompleteActivity : AppCompatActivity() {
             var failure: Throwable? = null
 
             while (completed < count && !stopRequested.get()) {
-                val result = LifeUpBridge.completeTask(this, profile.gid)
+                val result = LifeUpBridge.completeTask(this, gid)
                 if (result.isFailure) {
                     failure = result.exceptionOrNull()
                     break
@@ -128,15 +175,15 @@ class BulkCompleteActivity : AppCompatActivity() {
 
             runOnUiThread {
                 progressDialog.dismiss()
-                showResult(profile, completed, count, failure)
+                showResult(title, completed, count, failure)
             }
         }.start()
     }
 
-    private fun showResult(profile: TaskProfile, completed: Int, requested: Int, failure: Throwable?) {
+    private fun showResult(title: String, completed: Int, requested: Int, failure: Throwable?) {
         if (failure == null) {
             val message = if (completed == requested) {
-                "Completed \"${profile.label}\" $completed time(s)."
+                "Completed \"$title\" $completed time(s)."
             } else {
                 "Stopped after $completed / $requested."
             }

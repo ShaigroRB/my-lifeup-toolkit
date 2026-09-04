@@ -37,6 +37,15 @@
     </LinearLayout>
 
     <ImageButton
+        android:id="@+id/addShortcutButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Add shortcut"
+        android:padding="12dp"
+        android:src="@android:drawable/ic_menu_add" />
+
+    <ImageButton
         android:id="@+id/removeProfileButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
