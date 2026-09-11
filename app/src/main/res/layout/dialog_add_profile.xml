@@ -33,4 +33,14 @@
 
     </com.google.android.material.textfield.TextInputLayout>
 
+    <Button
+        android:id="@+id/pickFromListButton"
+        style="?attr/borderlessButtonStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="start"
+        android:layout_marginTop="4dp"
+        android:paddingHorizontal="0dp"
+        android:text="Pick from LifeUp tasks…" />
+
 </LinearLayout>

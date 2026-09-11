@@ -63,8 +63,11 @@ class BulkCompleteActivity : AppCompatActivity() {
         }
     }
 
-    private fun showAddProfileDialog() {
+    private fun showAddProfileDialog(prefillLabel: String = "", prefillGid: String = "") {
         val dialogBinding = DialogAddProfileBinding.inflate(layoutInflater)
+        dialogBinding.labelInput.setText(prefillLabel)
+        dialogBinding.gidInput.setText(prefillGid)
+        dialogBinding.pickFromListButton.setOnClickListener { showTaskPicker(dialogBinding) }
         AlertDialog.Builder(this)
             .setTitle("Add task")
             .setView(dialogBinding.root)
@@ -77,6 +80,44 @@ class BulkCompleteActivity : AppCompatActivity() {
                 }
                 TaskProfileStore.add(this, TaskProfile(label, gid))
                 renderProfileList()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showTaskPicker(target: DialogAddProfileBinding) {
+        val loadingDialog = AlertDialog.Builder(this)
+            .setTitle("Loading tasks…")
+            .setCancelable(false)
+            .create()
+        loadingDialog.show()
+
+        Thread {
+            val result = LifeUpBridge.listTasks(this)
+            runOnUiThread {
+                loadingDialog.dismiss()
+                result.fold(
+                    onSuccess = { tasks -> showTaskPickerResult(tasks, target) },
+                    onFailure = { error ->
+                        Toast.makeText(this, error.message ?: "Failed to load tasks", Toast.LENGTH_SHORT).show()
+                    }
+                )
+            }
+        }.start()
+    }
+
+    private fun showTaskPickerResult(tasks: List<LifeUpBridge.LifeUpTask>, target: DialogAddProfileBinding) {
+        if (tasks.isEmpty()) {
+            Toast.makeText(this, "No tasks found in LifeUp", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val names = tasks.map { it.name }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle("Choose a task")
+            .setItems(names) { _, which ->
+                val task = tasks[which]
+                target.labelInput.setText(task.name)
+                target.gidInput.setText(task.gid.toString())
             }
             .setNegativeButton("Cancel", null)
             .show()

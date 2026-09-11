@@ -10,8 +10,11 @@ object LifeUpBridge {
 
     private const val PACKAGE_NAME = "net.sarasarasa.lifeup"
     private val PROVIDER_URI: Uri = Uri.parse("content://net.sarasarasa.lifeup.provider.api/")
+    private val TASKS_URI: Uri = Uri.parse("content://net.sarasarasa.lifeup.provider.api/tasks")
 
     class LifeUpCallException(val errorCode: String?, message: String?) : Exception(message)
+
+    data class LifeUpTask(val gid: Long, val name: String)
 
     fun isInstalled(context: Context): Boolean {
         return try {
@@ -56,6 +59,41 @@ object LifeUpBridge {
         return try {
             call(context, "complete", "gid=$gid&ui=false")
             Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Lists LifeUp's tasks via its read-only tasks ContentProvider query
+     * (a plain [android.content.ContentResolver.query], not [call]).
+     * Run off the main thread — this is a cross-process IPC call.
+     */
+    fun listTasks(context: Context): Result<List<LifeUpTask>> {
+        return try {
+            val tasks = mutableListOf<LifeUpTask>()
+            context.contentResolver.query(TASKS_URI, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val errorCodeIndex = cursor.getColumnIndex("error_code")
+                    if (cursor.count == 1 && errorCodeIndex != -1) {
+                        val errorMessageIndex = cursor.getColumnIndex("error_message")
+                        throw LifeUpCallException(
+                            cursor.getString(errorCodeIndex),
+                            if (errorMessageIndex != -1) cursor.getString(errorMessageIndex) else null
+                        )
+                    }
+                    val gidIndex = cursor.getColumnIndex("_GID")
+                    val nameIndex = cursor.getColumnIndex("name")
+                    do {
+                        val gid = if (gidIndex != -1) cursor.getLong(gidIndex) else null
+                        val name = if (nameIndex != -1) cursor.getString(nameIndex) else null
+                        if (gid != null && name != null) {
+                            tasks.add(LifeUpTask(gid, name))
+                        }
+                    } while (cursor.moveToNext())
+                }
+            }
+            Result.success(tasks.sortedBy { it.name.lowercase() })
         } catch (e: Exception) {
             Result.failure(e)
         }
