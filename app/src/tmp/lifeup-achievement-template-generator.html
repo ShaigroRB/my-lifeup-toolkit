@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LifeUp Achievement Tier Generator</title>
+<style>
+  :root{
+    --ink:#1c231f;
+    --paper:#f5f3ec;
+    --paper-raised:#ffffff;
+    --line:#d9d4c4;
+    --emerald:#1f6f5c;
+    --emerald-dark:#164e41;
+    --gold:#b8862c;
+    --gold-soft:#f1e3c2;
+    --danger:#a8402f;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: "Avenir Next", "Segoe UI", system-ui, sans-serif;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--sans);
+    line-height:1.5;
+    padding-bottom:4rem;
+  }
+  header{
+    padding:2.4rem 1.5rem 1.6rem;
+    max-width:880px;
+    margin:0 auto;
+    border-bottom:1px solid var(--line);
+  }
+  .eyebrow{
+    font-family:var(--mono);
+    text-transform:uppercase;
+    letter-spacing:.14em;
+    font-size:.7rem;
+    color:var(--emerald-dark);
+    margin:0 0 .5rem;
+  }
+  h1{
+    font-family:var(--serif);
+    font-weight:600;
+    font-size:2.1rem;
+    margin:0 0 .6rem;
+    letter-spacing:-.01em;
+  }
+  header p{
+    max-width:60ch;
+    color:#4b5049;
+    font-size:.98rem;
+  }
+  header a{color:var(--emerald-dark);}
+  main{
+    max-width:880px;
+    margin:0 auto;
+    padding:0 1.5rem;
+  }
+  section{
+    margin-top:2.2rem;
+  }
+  h2{
+    font-family:var(--serif);
+    font-size:1.25rem;
+    margin:0 0 .2rem;
+    display:flex;
+    align-items:baseline;
+    gap:.6rem;
+  }
+  h2 .num{
+    font-family:var(--mono);
+    font-size:.85rem;
+    color:var(--gold);
+    letter-spacing:.05em;
+  }
+  .hint{
+    color:#666b60;
+    font-size:.86rem;
+    margin:0 0 1rem;
+  }
+  .card{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:1.2rem 1.3rem;
+  }
+  label{
+    display:block;
+    font-size:.78rem;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    color:#5a5f54;
+    margin-bottom:.3rem;
+  }
+  input[type=text], input[type=number], select, textarea{
+    width:100%;
+    padding:.55rem .65rem;
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-family:var(--sans);
+    font-size:.92rem;
+    background:#fffdf8;
+    color:var(--ink);
+  }
+  input:focus, select:focus, textarea:focus{
+    outline:2px solid var(--emerald);
+    outline-offset:1px;
+  }
+  .row{
+    display:grid;
+    gap:.9rem;
+  }
+  .row.two{grid-template-columns:1fr 1fr;}
+  .row.three{grid-template-columns:2fr 1fr 1fr;}
+  .field{margin-bottom:.9rem;}
+  .field:last-child{margin-bottom:0;}
+
+  .var-list, .tier-list{
+    display:flex;
+    flex-direction:column;
+    gap:.8rem;
+  }
+  .var-item{
+    display:grid;
+    grid-template-columns:1fr 1fr auto;
+    gap:.6rem;
+    align-items:end;
+  }
+  .tier-card{
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:1rem 1rem .8rem;
+    background:#fdfcf7;
+    position:relative;
+  }
+  .tier-card .tier-tag{
+    position:absolute;
+    top:-.6rem; left:1rem;
+    background:var(--emerald);
+    color:#fff;
+    font-family:var(--mono);
+    font-size:.68rem;
+    padding:.15rem .5rem;
+    border-radius:4px;
+    letter-spacing:.04em;
+  }
+  .tier-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:.7rem .9rem;
+    margin-top:.5rem;
+  }
+  .tier-grid .span2{grid-column:1/-1;}
+
+  button{
+    font-family:var(--sans);
+    cursor:pointer;
+    border-radius:6px;
+    border:1px solid var(--line);
+    background:#fff;
+    padding:.5rem .9rem;
+    font-size:.85rem;
+    color:var(--ink);
+  }
+  button:hover{border-color:var(--emerald);}
+  button.primary{
+    background:var(--emerald);
+    border-color:var(--emerald-dark);
+    color:#fff;
+    font-weight:600;
+  }
+  button.primary:hover{background:var(--emerald-dark);}
+  button.ghost{
+    background:transparent;
+    border:1px dashed var(--line);
+  }
+  button.danger{
+    color:var(--danger);
+    border-color:transparent;
+    background:transparent;
+    padding:.3rem .5rem;
+  }
+  button.danger:hover{background:#fbeae6;}
+  .btn-row{display:flex; gap:.6rem; flex-wrap:wrap; margin-top:1rem;}
+
+  .save-row{
+    display:flex;
+    gap:.6rem;
+    align-items:end;
+    flex-wrap:wrap;
+    margin-bottom:1.2rem;
+  }
+  .save-row .field{flex:1; min-width:180px; margin-bottom:0;}
+  .saved-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:.4rem;
+    background:var(--gold-soft);
+    border:1px solid var(--gold);
+    color:#5c4415;
+    font-family:var(--mono);
+    font-size:.76rem;
+    padding:.25rem .55rem;
+    border-radius:999px;
+  }
+  .saved-pill button{
+    border:none; background:none; padding:0; font-size:.85rem; color:#5c4415;
+  }
+
+  #output{margin-top:1.2rem;}
+  .out-card{
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:var(--paper-raised);
+    padding:1rem 1.1rem;
+    margin-bottom:.9rem;
+  }
+  .out-card h3{
+    font-family:var(--serif);
+    font-size:1.05rem;
+    margin:0 0 .2rem;
+  }
+  .out-card .desc{
+    color:#666b60;
+    font-size:.86rem;
+    margin:0 0 .6rem;
+  }
+  .out-card .meta{
+    font-family:var(--mono);
+    font-size:.74rem;
+    color:#7a7f73;
+    margin-bottom:.7rem;
+    word-break:break-all;
+  }
+  .out-actions{display:flex; gap:.6rem; flex-wrap:wrap;}
+  .out-actions a.lifeup-link{
+    text-decoration:none;
+    background:var(--emerald);
+    color:#fff;
+    padding:.5rem .9rem;
+    border-radius:6px;
+    font-size:.85rem;
+    font-weight:600;
+  }
+  .out-actions a.lifeup-link:hover{background:var(--emerald-dark);}
+
+  .callout{
+    border-left:3px solid var(--gold);
+    background:var(--gold-soft);
+    padding:.75rem 1rem;
+    border-radius:0 6px 6px 0;
+    font-size:.85rem;
+    color:#5c4415;
+    margin-top:1rem;
+  }
+  .callout.warn{
+    border-left-color:var(--danger);
+    background:#fbeae6;
+    color:#7a2c1e;
+  }
+  code{
+    font-family:var(--mono);
+    background:#eee9db;
+    padding:.1rem .35rem;
+    border-radius:4px;
+    font-size:.85em;
+  }
+  footer{
+    max-width:880px;
+    margin:2.5rem auto 0;
+    padding:1.2rem 1.5rem 0;
+    border-top:1px solid var(--line);
+    color:#7a7f73;
+    font-size:.8rem;
+  }
+  @media (max-width:640px){
+    .row.two, .row.three, .tier-grid{grid-template-columns:1fr;}
+    .var-item{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <p class="eyebrow">LifeUp API workaround &middot; unofficial</p>
+  <h1>Achievement Tier Generator</h1>
+  <p>
+    LifeUp doesn't have a built-in achievement template feature yet, but its
+    <a href="https://docs.lifeupapp.fun/en/index.html#/guide/api?id=achievement-management" target="_blank" rel="noopener">achievement API</a>
+    can create achievements directly. This page builds one tap-to-create link per tier from a single template,
+    so you fill the form once instead of copying and editing 4 achievements by hand.
+    Open this page <strong>on your Android device</strong> &mdash; the generated links only work where LifeUp is installed.
+  </p>
+</header>
+
+<main>
+
+  <section>
+    <h2><span class="num">01</span> Saved templates</h2>
+    <p class="hint">Templates are stored only in this browser (localStorage), not sent anywhere.</p>
+    <div class="card">
+      <div class="save-row">
+        <div class="field">
+          <label for="templateName">Template name</label>
+          <input type="text" id="templateName" placeholder="e.g. Habit Tier Track">
+        </div>
+        <button class="primary" id="saveTemplateBtn">Save current form</button>
+        <button class="ghost" id="newTemplateBtn">Start blank</button>
+      </div>
+      <div id="savedList"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">02</span> Shared settings</h2>
+    <p class="hint">
+      Applies to every tier below. IDs are found via <strong>Settings &rarr; Labs &rarr; Developer Mode</strong>,
+      then opening the relevant detail page in LifeUp.
+    </p>
+    <div class="card">
+      <div class="field">
+        <label for="categoryName">Achievement category name</label>
+        <div class="row two" style="align-items:end">
+          <input type="text" id="categoryName" placeholder="e.g. Habit Tiers">
+          <button class="ghost" id="createCategoryBtn" type="button">Build "create category" link</button>
+        </div>
+        <div id="categoryLinkOut"></div>
+      </div>
+      <div class="field">
+        <label for="categoryId">Achievement category ID</label>
+        <input type="number" id="categoryId" placeholder="e.g. 3">
+        <p class="hint" style="margin:.35rem 0 0">
+          This is what's actually used to file the achievements below. If the category doesn't exist yet,
+          tap the generated link above first, then check Developer Mode for its new ID and paste it here
+          &mdash; a webpage can't read the ID back automatically, only a native app integration can.
+        </p>
+      </div>
+      <div class="field">
+        <label for="skillIds">Skill IDs for EXP reward (comma-separated, optional)</label>
+        <input type="text" id="skillIds" placeholder="e.g. 1, 4">
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">03</span> Variables</h2>
+    <p class="hint">Placeholders you can reuse in tier names/descriptions below, written as <code>{key}</code>.</p>
+    <div class="card">
+      <div class="var-list" id="varList"></div>
+      <div class="btn-row">
+        <button class="ghost" id="addVarBtn">+ Add variable</button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">04</span> Tiers</h2>
+    <p class="hint">One achievement per tier. Reference your variables with <code>{name}</code>, <code>{something}</code>, etc.</p>
+    <div class="tier-list" id="tierList"></div>
+    <div class="btn-row">
+      <button class="ghost" id="addTierBtn">+ Add tier</button>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">05</span> Generate</h2>
+    <div class="btn-row">
+      <button class="primary" id="generateBtn">Generate creation links</button>
+    </div>
+    <div id="output"></div>
+  </section>
+
+</main>
+
+<footer>
+  Unofficial community tool &middot; built against the LifeUp API as documented at
+  <a href="https://docs.lifeupapp.fun/" target="_blank" rel="noopener">docs.lifeupapp.fun</a>.
+  Not affiliated with LifeUp / Ayagikei. No data leaves your browser.
+</footer>
+
+<script>
+(function(){
+  const CONDITION_TYPES = [
+    {code:"", label:"No condition (manual unlock)"},
+    {code:0, label:"Task completion count", related:"Task ID"},
+    {code:1, label:"Task completion streak", related:"Task ID"},
+    {code:3, label:"Pomodoro count"},
+    {code:4, label:"Days using LifeUp"},
+    {code:5, label:"Like count"},
+    {code:6, label:"Daily completion streak"},
+    {code:7, label:"Current coins"},
+    {code:8, label:"Coins earned in one day"},
+    {code:9, label:"Task pomodoro count", related:"Task ID"},
+    {code:10, label:"Item purchase count", related:"Item ID"},
+    {code:11, label:"Item usage count", related:"Item ID"},
+    {code:12, label:"Loot box item count", related:"Item ID"},
+    {code:13, label:"Skill level reached", related:"Skill ID"},
+    {code:14, label:"Life level"},
+    {code:15, label:"Total items obtained", related:"Item ID"},
+    {code:16, label:"Items from synthesis", related:"Item ID"},
+    {code:17, label:"Current item quantity", related:"Item ID"},
+    {code:18, label:"Task focus duration (minutes)", related:"Task ID"},
+    {code:19, label:"ATM savings"},
+    {code:20, label:"External API"}
+  ];
+
+  const STORAGE_KEY = "lifeup_ach_templates_v1";
+  let varList = [];
+  let tierList = [];
+  let idCounter = 0;
+
+  function uid(){ return "id" + (++idCounter); }
+
+  function defaultState(){
+    return {
+      categoryName: "",
+      categoryId: "",
+      skillIds: "",
+      vars: [
+        {id: uid(), key:"name", value:"Reading"},
+        {id: uid(), key:"something", value:"Discipline"}
+      ],
+      tiers: [
+        {id: uid(), name:"{name} Rookie", desc:"", condType:0, relatedId:"", target:10, coin:0, exp:0},
+        {id: uid(), name:"{name} Adept", desc:"", condType:0, relatedId:"", target:50, coin:0, exp:0},
+        {id: uid(), name:"{name} Champion", desc:"", condType:0, relatedId:"", target:200, coin:0, exp:0},
+        {id: uid(), name:"Master of {something}", desc:"", condType:0, relatedId:"", target:500, coin:0, exp:0}
+      ]
+    };
+  }
+
+  function loadTemplates(){
+    try{
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    }catch(e){ return {}; }
+  }
+  function saveTemplates(obj){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+  }
+
+  function renderVars(){
+    const container = document.getElementById("varList");
+    container.innerHTML = "";
+    varList.forEach(v => {
+      const row = document.createElement("div");
+      row.className = "var-item";
+      row.innerHTML = `
+        <div class="field" style="margin-bottom:0">
+          <label>Key</label>
+          <input type="text" value="${escapeAttr(v.key)}" data-role="key" placeholder="name">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Value</label>
+          <input type="text" value="${escapeAttr(v.value)}" data-role="value" placeholder="Reading">
+        </div>
+        <button class="danger" title="Remove variable">&times;</button>
+      `;
+      row.querySelector('[data-role="key"]').addEventListener("input", e => v.key = e.target.value);
+      row.querySelector('[data-role="value"]').addEventListener("input", e => v.value = e.target.value);
+      row.querySelector("button.danger").addEventListener("click", () => {
+        varList = varList.filter(x => x.id !== v.id);
+        renderVars();
+      });
+      container.appendChild(row);
+    });
+  }
+
+  function conditionOptionsHtml(selected){
+    return CONDITION_TYPES.map(c =>
+      `<option value="${c.code}" ${String(c.code)===String(selected)?"selected":""}>${c.label}</option>`
+    ).join("");
+  }
+
+  function renderTiers(){
+    const container = document.getElementById("tierList");
+    container.innerHTML = "";
+    tierList.forEach((t, idx) => {
+      const card = document.createElement("div");
+      card.className = "tier-card";
+      const condMeta = CONDITION_TYPES.find(c => String(c.code) === String(t.condType));
+      const needsRelated = condMeta && condMeta.related;
+      card.innerHTML = `
+        <span class="tier-tag">TIER ${idx+1}</span>
+        <div class="tier-grid">
+          <div class="field span2">
+            <label>Achievement name</label>
+            <input type="text" data-role="name" value="${escapeAttr(t.name)}" placeholder="{name} Rookie">
+          </div>
+          <div class="field span2">
+            <label>Description (optional)</label>
+            <input type="text" data-role="desc" value="${escapeAttr(t.desc)}" placeholder="Complete {name} 10 times">
+          </div>
+          <div class="field">
+            <label>Unlock condition</label>
+            <select data-role="condType">${conditionOptionsHtml(t.condType)}</select>
+          </div>
+          <div class="field">
+            <label>${needsRelated ? needsRelated : "Related ID (n/a)"}</label>
+            <input type="number" data-role="relatedId" value="${escapeAttr(t.relatedId)}" ${needsRelated ? "" : "disabled"} placeholder="e.g. task id/gid">
+          </div>
+          <div class="field">
+            <label>Target value</label>
+            <input type="number" data-role="target" value="${escapeAttr(t.target)}" placeholder="e.g. 10">
+          </div>
+          <div class="field">
+            <label>Coin reward</label>
+            <input type="number" data-role="coin" value="${escapeAttr(t.coin)}">
+          </div>
+          <div class="field">
+            <label>EXP reward</label>
+            <input type="number" data-role="exp" value="${escapeAttr(t.exp)}">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="danger" data-role="remove">Remove tier</button>
+        </div>
+      `;
+      card.querySelector('[data-role="name"]').addEventListener("input", e => t.name = e.target.value);
+      card.querySelector('[data-role="desc"]').addEventListener("input", e => t.desc = e.target.value);
+      card.querySelector('[data-role="condType"]').addEventListener("change", e => { t.condType = e.target.value; renderTiers(); });
+      card.querySelector('[data-role="relatedId"]').addEventListener("input", e => t.relatedId = e.target.value);
+      card.querySelector('[data-role="target"]').addEventListener("input", e => t.target = e.target.value);
+      card.querySelector('[data-role="coin"]').addEventListener("input", e => t.coin = e.target.value);
+      card.querySelector('[data-role="exp"]').addEventListener("input", e => t.exp = e.target.value);
+      card.querySelector('[data-role="remove"]').addEventListener("click", () => {
+        tierList = tierList.filter(x => x.id !== t.id);
+        renderTiers();
+      });
+      container.appendChild(card);
+    });
+  }
+
+  function escapeAttr(str){
+    return String(str == null ? "" : str).replace(/"/g, "&quot;");
+  }
+
+  function substitute(str){
+    if(!str) return str;
+    return str.replace(/\{(\w+)\}/g, (m, key) => {
+      const v = varList.find(x => x.key === key);
+      return v ? v.value : m;
+    });
+  }
+
+  function buildCategoryUrl(name){
+    const params = [];
+    params.push("type=achievements");
+    params.push("name=" + encodeURIComponent(name));
+    return "lifeup://api/category?" + params.join("&");
+  }
+
+  function renderCategoryLink(){
+    const out = document.getElementById("categoryLinkOut");
+    const name = document.getElementById("categoryName").value.trim();
+    if(!name){
+      out.innerHTML = `<p class="hint" style="margin:.5rem 0 0">Enter a name above, then build the link.</p>`;
+      return;
+    }
+    const url = buildCategoryUrl(name);
+    out.innerHTML = `
+      <div class="out-card" style="margin-top:.7rem">
+        <div class="meta">${escapeHtml(url)}</div>
+        <div class="out-actions">
+          <a class="lifeup-link" href="${url}">Create category in LifeUp</a>
+          <button data-role="copyCat">Copy link</button>
+        </div>
+      </div>
+    `;
+    out.querySelector('[data-role="copyCat"]').addEventListener("click", (e) => {
+      navigator.clipboard.writeText(url).then(() => {
+        const btn = e.target;
+        const old = btn.textContent;
+        btn.textContent = "Copied!";
+        setTimeout(() => btn.textContent = old, 1200);
+      });
+    });
+  }
+
+  function buildAchievementUrl(tier){
+    const categoryId = document.getElementById("categoryId").value.trim();
+    const skillIdsRaw = document.getElementById("skillIds").value.trim();
+    const name = substitute(tier.name);
+    const desc = substitute(tier.desc);
+
+    const params = [];
+    params.push("name=" + encodeURIComponent(name));
+    if(desc) params.push("desc=" + encodeURIComponent(desc));
+    if(categoryId) params.push("category_id=" + encodeURIComponent(categoryId));
+
+    if(tier.condType !== "" && tier.condType != null){
+      const cond = {type: Number(tier.condType)};
+      if(tier.relatedId) cond.related_id = Number(tier.relatedId);
+      if(tier.target) cond.target = Number(tier.target);
+      params.push("conditions_json=" + encodeURIComponent(JSON.stringify([cond])));
+    }
+    if(tier.coin) params.push("coin=" + encodeURIComponent(tier.coin));
+    if(tier.exp) params.push("exp=" + encodeURIComponent(tier.exp));
+    if(skillIdsRaw){
+      skillIdsRaw.split(",").map(s => s.trim()).filter(Boolean).forEach(s => {
+        params.push("skills=" + encodeURIComponent(s));
+      });
+    }
+    return {
+      url: "lifeup://api/achievement?" + params.join("&"),
+      name, desc
+    };
+  }
+
+  function renderOutput(){
+    const container = document.getElementById("output");
+    container.innerHTML = "";
+
+    if(!document.getElementById("categoryId").value.trim()){
+      container.innerHTML = `<div class="callout warn">Set an achievement category / list ID in section 2 first &mdash; the API requires it to know where to file the achievement.</div>`;
+      return;
+    }
+
+    tierList.forEach((t, idx) => {
+      const built = buildAchievementUrl(t);
+      const card = document.createElement("div");
+      card.className = "out-card";
+      card.innerHTML = `
+        <h3>Tier ${idx+1}: ${escapeHtml(built.name)}</h3>
+        ${built.desc ? `<p class="desc">${escapeHtml(built.desc)}</p>` : ""}
+        <div class="meta">${escapeHtml(built.url)}</div>
+        <div class="out-actions">
+          <a class="lifeup-link" href="${built.url}">Create in LifeUp</a>
+          <button data-role="copy">Copy link</button>
+        </div>
+      `;
+      card.querySelector('[data-role="copy"]').addEventListener("click", (e) => {
+        navigator.clipboard.writeText(built.url).then(() => {
+          const btn = e.target;
+          const old = btn.textContent;
+          btn.textContent = "Copied!";
+          setTimeout(() => btn.textContent = old, 1200);
+        });
+      });
+      container.appendChild(card);
+    });
+
+    const note = document.createElement("div");
+    note.className = "callout";
+    note.innerHTML = `Tap each <strong>Create in LifeUp</strong> link one at a time, on this device, in order. Each tap opens LifeUp and creates that tier's achievement immediately &mdash; there's no confirmation step, so double check the fields above before generating.`;
+    container.appendChild(note);
+  }
+
+  function escapeHtml(str){
+    const d = document.createElement("div");
+    d.textContent = str == null ? "" : str;
+    return d.innerHTML;
+  }
+
+  function renderSavedList(){
+    const templates = loadTemplates();
+    const container = document.getElementById("savedList");
+    const names = Object.keys(templates);
+    if(names.length === 0){
+      container.innerHTML = `<p class="hint" style="margin:.6rem 0 0">No saved templates yet.</p>`;
+      return;
+    }
+    const wrap = document.createElement("div");
+    wrap.style.cssText = "display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.8rem;";
+    names.forEach(n => {
+      const pill = document.createElement("span");
+      pill.className = "saved-pill";
+      pill.innerHTML = `<button data-role="load">${escapeHtml(n)}</button><button data-role="del">&times;</button>`;
+      pill.querySelector('[data-role="load"]').addEventListener("click", () => loadTemplate(n));
+      pill.querySelector('[data-role="del"]').addEventListener("click", () => {
+        const t = loadTemplates();
+        delete t[n];
+        saveTemplates(t);
+        renderSavedList();
+      });
+      wrap.appendChild(pill);
+    });
+    container.innerHTML = "";
+    container.appendChild(wrap);
+  }
+
+  function currentStateFromForm(){
+    return {
+      categoryName: document.getElementById("categoryName").value,
+      categoryId: document.getElementById("categoryId").value,
+      skillIds: document.getElementById("skillIds").value,
+      vars: varList.map(v => ({id:v.id, key:v.key, value:v.value})),
+      tiers: tierList.map(t => ({...t}))
+    };
+  }
+
+  function applyState(state){
+    document.getElementById("categoryName").value = state.categoryName || "";
+    document.getElementById("categoryId").value = state.categoryId || "";
+    document.getElementById("skillIds").value = state.skillIds || "";
+    varList = (state.vars || []).map(v => ({id: v.id || uid(), key:v.key, value:v.value}));
+    tierList = (state.tiers || []).map(t => ({...t, id: t.id || uid()}));
+    renderVars();
+    renderTiers();
+    document.getElementById("output").innerHTML = "";
+    document.getElementById("categoryLinkOut").innerHTML = "";
+  }
+
+  function loadTemplate(name){
+    const templates = loadTemplates();
+    if(templates[name]){
+      applyState(templates[name]);
+      document.getElementById("templateName").value = name;
+    }
+  }
+
+  document.getElementById("createCategoryBtn").addEventListener("click", renderCategoryLink);
+  document.getElementById("categoryName").addEventListener("input", () => {
+    document.getElementById("categoryLinkOut").innerHTML = "";
+  });
+
+  document.getElementById("addVarBtn").addEventListener("click", () => {
+    varList.push({id: uid(), key:"", value:""});
+    renderVars();
+  });
+
+  document.getElementById("addTierBtn").addEventListener("click", () => {
+    tierList.push({id: uid(), name:"", desc:"", condType:0, relatedId:"", target:"", coin:0, exp:0});
+    renderTiers();
+  });
+
+  document.getElementById("generateBtn").addEventListener("click", renderOutput);
+
+  document.getElementById("saveTemplateBtn").addEventListener("click", () => {
+    const name = document.getElementById("templateName").value.trim();
+    if(!name){ alert("Give the template a name first."); return; }
+    const templates = loadTemplates();
+    templates[name] = currentStateFromForm();
+    saveTemplates(templates);
+    renderSavedList();
+  });
+
+  document.getElementById("newTemplateBtn").addEventListener("click", () => {
+    document.getElementById("templateName").value = "";
+    applyState(defaultState());
+  });
+
+  // init
+  applyState(defaultState());
+  renderSavedList();
+})();
+</script>
+
+</body>
+</html>
