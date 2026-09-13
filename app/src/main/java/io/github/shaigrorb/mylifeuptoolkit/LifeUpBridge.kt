@@ -5,6 +5,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import org.json.JSONArray
+import org.json.JSONObject
 
 object LifeUpBridge {
 
@@ -96,6 +98,71 @@ object LifeUpBridge {
             Result.success(tasks.sortedBy { it.name.lowercase() })
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    /** Creates an achievement category and returns its id, read straight off the response Bundle. */
+    fun createCategory(context: Context, name: String): Result<Long> {
+        return try {
+            val arg = "type=achievements&name=${Uri.encode(name)}"
+            Result.success(extractId(call(context, "category", arg), "category"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /** Creates an achievement in [categoryId] and returns its id, read straight off the response Bundle. */
+    fun createAchievement(
+        context: Context,
+        categoryId: Long,
+        name: String,
+        desc: String?,
+        conditionType: Int?,
+        relatedId: Long?,
+        target: Int?,
+        coin: Int?,
+        exp: Int?,
+        skillIds: List<Long>?
+    ): Result<Long> {
+        return try {
+            val params = StringBuilder()
+            fun append(key: String, value: String) {
+                if (params.isNotEmpty()) params.append('&')
+                params.append(key).append('=').append(Uri.encode(value))
+            }
+
+            append("name", name)
+            if (!desc.isNullOrBlank()) append("desc", desc)
+            append("category_id", categoryId.toString())
+            if (conditionType != null) {
+                val condition = JSONObject().put("type", conditionType)
+                if (relatedId != null) condition.put("related_id", relatedId)
+                if (target != null) condition.put("target", target)
+                append("conditions_json", JSONArray().put(condition).toString())
+            }
+            if (coin != null) append("coin", coin.toString())
+            if (exp != null) append("exp", exp.toString())
+            skillIds?.forEach { append("skills", it.toString()) }
+
+            Result.success(extractId(call(context, "achievement", params.toString()), "achievement"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Reads the "id" field LifeUp returns from category/achievement creation calls.
+     * The docs only promise "Number", so the Bundle's actual type isn't guaranteed —
+     * try a Long first and fall back to an Int.
+     */
+    private fun extractId(result: Bundle?, method: String): Long {
+        if (result == null || !result.containsKey("id")) {
+            throw LifeUpCallException(null, "LifeUp did not return an id for \"$method\"")
+        }
+        return try {
+            result.getLong("id")
+        } catch (e: ClassCastException) {
+            result.getInt("id").toLong()
         }
     }
 }

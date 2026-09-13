@@ -24,8 +24,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.itemAchievementTemplates.setOnClickListener {
-            // TODO: replace with an Intent to AchievementTemplateActivity once that screen exists
-            Toast.makeText(this, "Achievement Templates — not built yet", Toast.LENGTH_SHORT).show()
+            if (!LifeUpBridge.isInstalled(this)) {
+                Toast.makeText(this, "LifeUp not installed", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            startActivity(Intent(this, AchievementTemplateActivity::class.java))
         }
 
         // itemStats is intentionally not clickable (see activity_main.xml) — no listener needed yet.

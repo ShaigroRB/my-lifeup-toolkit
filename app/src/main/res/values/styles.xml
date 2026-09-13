@@ -1,0 +1,27 @@
+<resources>
+
+    <!-- Small caps-ish label shown above an input, e.g. "Achievement category name". -->
+    <style name="FieldLabel">
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">#5A5F54</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.04</item>
+        <item name="android:layout_marginBottom">4dp</item>
+    </style>
+
+    <!-- Explanatory sentence shown under a section header. -->
+    <style name="SectionHint">
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">#666B60</item>
+        <item name="android:layout_marginBottom">12dp</item>
+    </style>
+
+    <!-- Numbered section header, e.g. "1. Saved templates". -->
+    <style name="SectionHeader">
+        <item name="android:textSize">17sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:layout_marginBottom">2dp</item>
+    </style>
+
+</resources>

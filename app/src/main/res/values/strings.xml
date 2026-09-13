@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">My LifeUp Toolkit</string>
+    <string name="hint_shared_settings">Applies to every tier below. IDs are found via <b>Settings → Labs → Developer Mode</b>, then opening the relevant detail page in LifeUp.</string>
 </resources>
