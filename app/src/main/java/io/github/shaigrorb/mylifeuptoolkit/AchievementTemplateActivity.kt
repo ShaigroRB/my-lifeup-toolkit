@@ -54,6 +54,9 @@ class AchievementTemplateActivity : AppCompatActivity() {
         binding.saveTemplateButton.setOnClickListener { saveCurrentAsTemplate() }
         binding.newTemplateButton.setOnClickListener { loadBlank() }
         binding.generateButton.setOnClickListener { onGenerateClicked() }
+        binding.categoryModeGroup.setOnCheckedChangeListener { _, checkedId ->
+            applyCategoryModeVisibility(checkedId == binding.existingCategoryRadio.id)
+        }
 
         loadBlank()
         renderSavedTemplateList()
@@ -62,6 +65,10 @@ class AchievementTemplateActivity : AppCompatActivity() {
     private fun loadBlank() {
         binding.templateNameInput.setText("")
         binding.categoryNameInput.setText("")
+        binding.existingCategoryIdInput.setText("")
+        binding.subcategoryNameInput.setText("")
+        binding.newCategoryRadio.isChecked = true
+        applyCategoryModeVisibility(useExisting = false)
         binding.skillIdsInput.setText("")
         loadedTemplateId = null
 
@@ -82,6 +89,11 @@ class AchievementTemplateActivity : AppCompatActivity() {
     private fun loadTemplate(template: AchievementTemplate) {
         binding.templateNameInput.setText(template.templateName)
         binding.categoryNameInput.setText(template.categoryName)
+        binding.existingCategoryIdInput.setText(template.existingCategoryId)
+        binding.subcategoryNameInput.setText(template.subcategoryName)
+        binding.newCategoryRadio.isChecked = !template.useExistingCategory
+        binding.existingCategoryRadio.isChecked = template.useExistingCategory
+        applyCategoryModeVisibility(template.useExistingCategory)
         binding.skillIdsInput.setText(template.skillIds)
         loadedTemplateId = template.id
 
@@ -106,6 +118,11 @@ class AchievementTemplateActivity : AppCompatActivity() {
 
         renderVariables()
         renderTiers()
+    }
+
+    private fun applyCategoryModeVisibility(useExisting: Boolean) {
+        binding.newCategoryGroup.visibility = if (useExisting) View.GONE else View.VISIBLE
+        binding.existingCategoryGroup.visibility = if (useExisting) View.VISIBLE else View.GONE
     }
 
     private fun renderSavedTemplateList() {
@@ -152,6 +169,9 @@ class AchievementTemplateActivity : AppCompatActivity() {
             id = loadedTemplateId ?: UUID.randomUUID().toString(),
             templateName = name,
             categoryName = binding.categoryNameInput.text?.toString().orEmpty(),
+            useExistingCategory = binding.existingCategoryRadio.isChecked,
+            existingCategoryId = binding.existingCategoryIdInput.text?.toString()?.trim().orEmpty(),
+            subcategoryName = binding.subcategoryNameInput.text?.toString().orEmpty(),
             skillIds = binding.skillIdsInput.text?.toString().orEmpty(),
             variables = variables.filter { it.key.isNotBlank() }.associate { it.key to it.value },
             tiers = tiers.map {
@@ -236,11 +256,6 @@ class AchievementTemplateActivity : AppCompatActivity() {
     }
 
     private fun onGenerateClicked() {
-        val categoryNameRaw = binding.categoryNameInput.text?.toString()?.trim().orEmpty()
-        if (categoryNameRaw.isEmpty()) {
-            Toast.makeText(this, "Enter an achievement category name", Toast.LENGTH_SHORT).show()
-            return
-        }
         if (tiers.isEmpty()) {
             Toast.makeText(this, "Add at least one tier", Toast.LENGTH_SHORT).show()
             return
@@ -249,20 +264,81 @@ class AchievementTemplateActivity : AppCompatActivity() {
         val variablesMap = variables.filter { it.key.isNotBlank() }.associate { it.key to it.value }
         val skillIds = binding.skillIdsInput.text?.toString().orEmpty()
             .split(",").map { it.trim() }.filter { it.isNotEmpty() }.mapNotNull { it.toLongOrNull() }
-        val categoryName = TemplateSubstitution.substitute(categoryNameRaw, variablesMap)
 
-        runGenerate(categoryName, tiers.toList(), variablesMap, skillIds)
+        if (binding.existingCategoryRadio.isChecked) {
+            val existingCategoryId = binding.existingCategoryIdInput.text?.toString()?.trim()?.toLongOrNull()
+            if (existingCategoryId == null) {
+                Toast.makeText(this, "Enter a valid existing category ID", Toast.LENGTH_SHORT).show()
+                return
+            }
+            val subcategoryNameRaw = binding.subcategoryNameInput.text?.toString()?.trim().orEmpty()
+            if (subcategoryNameRaw.isEmpty()) {
+                Toast.makeText(this, "Enter a subcategory name", Toast.LENGTH_SHORT).show()
+                return
+            }
+            val subcategoryName = TemplateSubstitution.substitute(subcategoryNameRaw, variablesMap)
+            runGenerateExisting(existingCategoryId, subcategoryName, tiers.toList(), variablesMap, skillIds)
+        } else {
+            val categoryNameRaw = binding.categoryNameInput.text?.toString()?.trim().orEmpty()
+            if (categoryNameRaw.isEmpty()) {
+                Toast.makeText(this, "Enter an achievement category name", Toast.LENGTH_SHORT).show()
+                return
+            }
+            val categoryName = TemplateSubstitution.substitute(categoryNameRaw, variablesMap)
+            runGenerateNewCategory(categoryName, tiers.toList(), variablesMap, skillIds)
+        }
     }
 
-    private fun runGenerate(
+    private fun runGenerateNewCategory(
         categoryName: String,
         tierSnapshot: List<TierRow>,
         variablesMap: Map<String, String>,
         skillIds: List<Long>
     ) {
+        val (progressBinding, progressDialog) =
+            createProgressDialog(tierSnapshot.size, "Creating category \"$categoryName\"...")
+
+        Thread {
+            val categoryResult = LifeUpBridge.createCategory(this, categoryName)
+            val categoryId = categoryResult.getOrNull()
+            if (categoryId == null) {
+                runOnUiThread {
+                    progressDialog.dismiss()
+                    showGenerateResult(0, tierSnapshot.size, categoryResult.exceptionOrNull())
+                }
+                return@Thread
+            }
+            generateTiers(categoryId, tierSnapshot, variablesMap, skillIds, progressBinding, progressDialog)
+        }.start()
+    }
+
+    private fun runGenerateExisting(
+        categoryId: Long,
+        subcategoryName: String,
+        tierSnapshot: List<TierRow>,
+        variablesMap: Map<String, String>,
+        skillIds: List<Long>
+    ) {
+        val (progressBinding, progressDialog) =
+            createProgressDialog(tierSnapshot.size, "Creating subcategory \"$subcategoryName\"...")
+
+        Thread {
+            val subcategoryResult = LifeUpBridge.createSubcategory(this, categoryId, subcategoryName)
+            if (subcategoryResult.isFailure) {
+                runOnUiThread {
+                    progressDialog.dismiss()
+                    showGenerateResult(0, tierSnapshot.size, subcategoryResult.exceptionOrNull())
+                }
+                return@Thread
+            }
+            generateTiers(categoryId, tierSnapshot, variablesMap, skillIds, progressBinding, progressDialog)
+        }.start()
+    }
+
+    private fun createProgressDialog(tierCount: Int, initialText: String): Pair<DialogProgressBinding, AlertDialog> {
         val progressBinding = DialogProgressBinding.inflate(layoutInflater)
-        progressBinding.progressBar.max = tierSnapshot.size
-        progressBinding.progressText.text = "Creating category \"$categoryName\"..."
+        progressBinding.progressBar.max = tierCount
+        progressBinding.progressText.text = initialText
 
         val progressDialog = AlertDialog.Builder(this)
             .setTitle("Generating achievements")
@@ -271,58 +347,57 @@ class AchievementTemplateActivity : AppCompatActivity() {
             .create()
         progressDialog.show()
 
-        Thread {
-            val categoryResult = LifeUpBridge.createCategory(this, categoryName)
-            val categoryId = categoryResult.getOrNull()
-            if (categoryId == null) {
-                val error = categoryResult.exceptionOrNull()
-                runOnUiThread {
-                    progressDialog.dismiss()
-                    showGenerateResult(0, tierSnapshot.size, error)
-                }
-                return@Thread
-            }
+        return progressBinding to progressDialog
+    }
 
-            var created = 0
-            var failure: Throwable? = null
+    /** Runs on the calling background thread — does not spawn its own. */
+    private fun generateTiers(
+        categoryId: Long,
+        tierSnapshot: List<TierRow>,
+        variablesMap: Map<String, String>,
+        skillIds: List<Long>,
+        progressBinding: DialogProgressBinding,
+        progressDialog: AlertDialog
+    ) {
+        var created = 0
+        var failure: Throwable? = null
 
-            for ((index, tier) in tierSnapshot.withIndex()) {
-                runOnUiThread {
-                    progressBinding.progressBar.progress = index
-                    progressBinding.progressText.text = "Creating tier ${index + 1} / ${tierSnapshot.size}..."
-                }
-
-                val name = TemplateSubstitution.substitute(tier.name, variablesMap)
-                val desc = TemplateSubstitution.substitute(tier.desc, variablesMap).ifBlank { null }
-                val relatedId = TemplateSubstitution.substitute(tier.relatedId, variablesMap).toLongOrNull()
-
-                val result = LifeUpBridge.createAchievement(
-                    this,
-                    categoryId,
-                    name,
-                    desc,
-                    tier.conditionType,
-                    relatedId,
-                    tier.target.toIntOrNull(),
-                    tier.coin.toIntOrNull(),
-                    tier.exp.toIntOrNull(),
-                    skillIds.ifEmpty { null }
-                )
-
-                if (result.isFailure) {
-                    failure = result.exceptionOrNull()
-                    break
-                }
-                created++
-                val progressCount = created
-                runOnUiThread { progressBinding.progressBar.progress = progressCount }
-            }
-
+        for ((index, tier) in tierSnapshot.withIndex()) {
             runOnUiThread {
-                progressDialog.dismiss()
-                showGenerateResult(created, tierSnapshot.size, failure)
+                progressBinding.progressBar.progress = index
+                progressBinding.progressText.text = "Creating tier ${index + 1} / ${tierSnapshot.size}..."
             }
-        }.start()
+
+            val name = TemplateSubstitution.substitute(tier.name, variablesMap)
+            val desc = TemplateSubstitution.substitute(tier.desc, variablesMap).ifBlank { null }
+            val relatedId = TemplateSubstitution.substitute(tier.relatedId, variablesMap).toLongOrNull()
+
+            val result = LifeUpBridge.createAchievement(
+                this,
+                categoryId,
+                name,
+                desc,
+                tier.conditionType,
+                relatedId,
+                tier.target.toIntOrNull(),
+                tier.coin.toIntOrNull(),
+                tier.exp.toIntOrNull(),
+                skillIds.ifEmpty { null }
+            )
+
+            if (result.isFailure) {
+                failure = result.exceptionOrNull()
+                break
+            }
+            created++
+            val progressCount = created
+            runOnUiThread { progressBinding.progressBar.progress = progressCount }
+        }
+
+        runOnUiThread {
+            progressDialog.dismiss()
+            showGenerateResult(created, tierSnapshot.size, failure)
+        }
     }
 
     private fun showGenerateResult(created: Int, total: Int, failure: Throwable?) {

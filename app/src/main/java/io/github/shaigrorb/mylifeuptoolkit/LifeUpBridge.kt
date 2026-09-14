@@ -111,6 +111,19 @@ object LifeUpBridge {
         }
     }
 
+    /**
+     * Creates a subcategory (a name-only grouping row) inside [categoryId] and returns its id.
+     * Subcategories are achievement rows with `is_subcategory=true` — see LifeUp's achievement API.
+     */
+    fun createSubcategory(context: Context, categoryId: Long, name: String): Result<Long> {
+        return try {
+            val arg = "name=${Uri.encode(name)}&category_id=$categoryId&is_subcategory=true"
+            Result.success(extractId(call(context, "achievement", arg), "achievement"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     /** Creates an achievement in [categoryId] and returns its id, read straight off the response Bundle. */
     fun createAchievement(
         context: Context,

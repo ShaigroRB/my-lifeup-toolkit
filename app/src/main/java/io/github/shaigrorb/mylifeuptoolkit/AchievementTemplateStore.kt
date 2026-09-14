@@ -12,6 +12,9 @@ object AchievementTemplateStore {
     private const val KEY_ID = "id"
     private const val KEY_TEMPLATE_NAME = "templateName"
     private const val KEY_CATEGORY_NAME = "categoryName"
+    private const val KEY_USE_EXISTING_CATEGORY = "useExistingCategory"
+    private const val KEY_EXISTING_CATEGORY_ID = "existingCategoryId"
+    private const val KEY_SUBCATEGORY_NAME = "subcategoryName"
     private const val KEY_SKILL_IDS = "skillIds"
     private const val KEY_VARIABLES = "variables"
     private const val KEY_TIERS = "tiers"
@@ -56,6 +59,9 @@ object AchievementTemplateStore {
             id = obj.optString(KEY_ID).ifEmpty { java.util.UUID.randomUUID().toString() },
             templateName = obj.getString(KEY_TEMPLATE_NAME),
             categoryName = obj.optString(KEY_CATEGORY_NAME),
+            useExistingCategory = obj.optBoolean(KEY_USE_EXISTING_CATEGORY, false),
+            existingCategoryId = obj.optString(KEY_EXISTING_CATEGORY_ID),
+            subcategoryName = obj.optString(KEY_SUBCATEGORY_NAME),
             skillIds = obj.optString(KEY_SKILL_IDS),
             variables = variablesMap,
             tiers = if (tiers == null) emptyList() else (0 until tiers.length()).map { i ->
@@ -103,6 +109,9 @@ object AchievementTemplateStore {
                     .put(KEY_ID, template.id)
                     .put(KEY_TEMPLATE_NAME, template.templateName)
                     .put(KEY_CATEGORY_NAME, template.categoryName)
+                    .put(KEY_USE_EXISTING_CATEGORY, template.useExistingCategory)
+                    .put(KEY_EXISTING_CATEGORY_ID, template.existingCategoryId)
+                    .put(KEY_SUBCATEGORY_NAME, template.subcategoryName)
                     .put(KEY_SKILL_IDS, template.skillIds)
                     .put(KEY_VARIABLES, variables)
                     .put(KEY_TIERS, tiers)

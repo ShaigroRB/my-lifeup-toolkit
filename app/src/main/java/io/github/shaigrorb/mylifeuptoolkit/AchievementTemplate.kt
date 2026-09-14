@@ -17,6 +17,9 @@ data class AchievementTemplate(
     val id: String = UUID.randomUUID().toString(),
     val templateName: String,
     val categoryName: String = "",
+    val useExistingCategory: Boolean = false,
+    val existingCategoryId: String = "",
+    val subcategoryName: String = "",
     val skillIds: String = "",
     val variables: Map<String, String> = emptyMap(),
     val tiers: List<AchievementTier> = emptyList()

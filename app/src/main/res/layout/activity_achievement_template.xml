@@ -119,15 +119,91 @@
             style="@style/FieldLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Achievement category name" />
+            android:text="Category" />
 
-        <EditText
-            android:id="@+id/categoryNameInput"
+        <RadioGroup
+            android:id="@+id/categoryModeGroup"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="e.g. {name} Tiers"
-            android:inputType="text"
-            android:autofillHints="" />
+            android:orientation="horizontal">
+
+            <RadioButton
+                android:id="@+id/newCategoryRadio"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="New category" />
+
+            <RadioButton
+                android:id="@+id/existingCategoryRadio"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="24dp"
+                android:text="Existing category" />
+
+        </RadioGroup>
+
+        <LinearLayout
+            android:id="@+id/newCategoryGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/FieldLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Achievement category name" />
+
+            <EditText
+                android:id="@+id/categoryNameInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="e.g. {name} Tiers"
+                android:inputType="text"
+                android:autofillHints="" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/existingCategoryGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                style="@style/FieldLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Existing category ID" />
+
+            <EditText
+                android:id="@+id/existingCategoryIdInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="e.g. 17"
+                android:inputType="number"
+                android:autofillHints="" />
+
+            <TextView
+                style="@style/FieldLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Subcategory name" />
+
+            <EditText
+                android:id="@+id/subcategoryNameInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="e.g. {name} Tiers"
+                android:inputType="text"
+                android:autofillHints="" />
+
+        </LinearLayout>
 
         <TextView
             style="@style/FieldLabel"
