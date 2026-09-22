@@ -21,6 +21,9 @@ data class AchievementTemplate(
     val existingCategoryId: String = "",
     val subcategoryName: String = "",
     val skillIds: String = "",
+    val useSharedCondition: Boolean = false,
+    val sharedConditionType: Int? = null,
+    val sharedRelatedIdTemplate: String = "",
     val variables: Map<String, String> = emptyMap(),
     val tiers: List<AchievementTier> = emptyList()
 )

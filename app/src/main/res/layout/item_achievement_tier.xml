@@ -50,6 +50,7 @@
         tools:text="Complete {name} 10 times" />
 
     <TextView
+        android:id="@+id/tierConditionLabel"
         style="@style/FieldLabel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

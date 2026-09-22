@@ -57,6 +57,11 @@ class AchievementTemplateActivity : AppCompatActivity() {
         binding.categoryModeGroup.setOnCheckedChangeListener { _, checkedId ->
             applyCategoryModeVisibility(checkedId == binding.existingCategoryRadio.id)
         }
+        setupSharedConditionSpinner()
+        binding.sharedConditionToggle.setOnCheckedChangeListener { _, isChecked ->
+            applySharedConditionState(isChecked)
+            renderTiers()
+        }
 
         loadBlank()
         renderSavedTemplateList()
@@ -70,6 +75,11 @@ class AchievementTemplateActivity : AppCompatActivity() {
         binding.newCategoryRadio.isChecked = true
         applyCategoryModeVisibility(useExisting = false)
         binding.skillIdsInput.setText("")
+        binding.sharedConditionToggle.isChecked = false
+        binding.sharedConditionSpinner.setSelection(ConditionTypes.indexOf(null))
+        binding.sharedRelatedIdInput.setText("")
+        applySharedRelatedIdState(null)
+        applySharedConditionState(false)
         loadedTemplateId = null
 
         variables.clear()
@@ -95,6 +105,11 @@ class AchievementTemplateActivity : AppCompatActivity() {
         binding.existingCategoryRadio.isChecked = template.useExistingCategory
         applyCategoryModeVisibility(template.useExistingCategory)
         binding.skillIdsInput.setText(template.skillIds)
+        binding.sharedConditionToggle.isChecked = template.useSharedCondition
+        binding.sharedConditionSpinner.setSelection(ConditionTypes.indexOf(template.sharedConditionType))
+        binding.sharedRelatedIdInput.setText(template.sharedRelatedIdTemplate)
+        applySharedRelatedIdState(template.sharedConditionType)
+        applySharedConditionState(template.useSharedCondition)
         loadedTemplateId = template.id
 
         variables.clear()
@@ -123,6 +138,29 @@ class AchievementTemplateActivity : AppCompatActivity() {
     private fun applyCategoryModeVisibility(useExisting: Boolean) {
         binding.newCategoryGroup.visibility = if (useExisting) View.GONE else View.VISIBLE
         binding.existingCategoryGroup.visibility = if (useExisting) View.VISIBLE else View.GONE
+    }
+
+    private fun setupSharedConditionSpinner() {
+        val conditionLabels = ConditionTypes.ALL.map { it.label }
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, conditionLabels)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.sharedConditionSpinner.adapter = adapter
+        binding.sharedConditionSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                applySharedRelatedIdState(ConditionTypes.ALL[position].code)
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+    }
+
+    private fun applySharedConditionState(enabled: Boolean) {
+        binding.sharedConditionGroup.visibility = if (enabled) View.VISIBLE else View.GONE
+    }
+
+    private fun applySharedRelatedIdState(conditionType: Int?) {
+        val relatedLabel = ConditionTypes.ALL.find { it.code == conditionType }?.relatedIdLabel
+        binding.sharedRelatedIdInput.isEnabled = relatedLabel != null
+        binding.sharedRelatedIdLabel.text = relatedLabel ?: "Related ID (n/a)"
     }
 
     private fun renderSavedTemplateList() {
@@ -173,6 +211,9 @@ class AchievementTemplateActivity : AppCompatActivity() {
             existingCategoryId = binding.existingCategoryIdInput.text?.toString()?.trim().orEmpty(),
             subcategoryName = binding.subcategoryNameInput.text?.toString().orEmpty(),
             skillIds = binding.skillIdsInput.text?.toString().orEmpty(),
+            useSharedCondition = binding.sharedConditionToggle.isChecked,
+            sharedConditionType = ConditionTypes.ALL[binding.sharedConditionSpinner.selectedItemPosition].code,
+            sharedRelatedIdTemplate = binding.sharedRelatedIdInput.text?.toString().orEmpty(),
             variables = variables.filter { it.key.isNotBlank() }.associate { it.key to it.value },
             tiers = tiers.map {
                 AchievementTier(
@@ -208,6 +249,7 @@ class AchievementTemplateActivity : AppCompatActivity() {
     private fun renderTiers() {
         binding.tierListContainer.removeAllViews()
         val conditionLabels = ConditionTypes.ALL.map { it.label }
+        val sharedMode = binding.sharedConditionToggle.isChecked
 
         tiers.forEachIndexed { index, row ->
             val itemBinding = ItemAchievementTierBinding.inflate(layoutInflater, binding.tierListContainer, false)
@@ -219,11 +261,16 @@ class AchievementTemplateActivity : AppCompatActivity() {
             itemBinding.tierExpInput.setText(row.exp)
             itemBinding.tierRelatedIdInput.setText(row.relatedId)
 
+            itemBinding.tierConditionLabel.visibility = if (sharedMode) View.GONE else View.VISIBLE
+            itemBinding.tierConditionSpinner.visibility = if (sharedMode) View.GONE else View.VISIBLE
+            itemBinding.tierRelatedIdLabel.visibility = if (sharedMode) View.GONE else View.VISIBLE
+            itemBinding.tierRelatedIdInput.visibility = if (sharedMode) View.GONE else View.VISIBLE
+
             val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, conditionLabels)
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
             itemBinding.tierConditionSpinner.adapter = adapter
             itemBinding.tierConditionSpinner.setSelection(ConditionTypes.indexOf(row.conditionType))
-            applyRelatedIdState(itemBinding, row.conditionType)
+            if (!sharedMode) applyRelatedIdState(itemBinding, row.conditionType)
 
             itemBinding.tierConditionSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                 override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
@@ -265,6 +312,14 @@ class AchievementTemplateActivity : AppCompatActivity() {
         val skillIds = binding.skillIdsInput.text?.toString().orEmpty()
             .split(",").map { it.trim() }.filter { it.isNotEmpty() }.mapNotNull { it.toLongOrNull() }
 
+        val tierSnapshot = if (binding.sharedConditionToggle.isChecked) {
+            val sharedConditionType = ConditionTypes.ALL[binding.sharedConditionSpinner.selectedItemPosition].code
+            val sharedRelatedId = binding.sharedRelatedIdInput.text?.toString().orEmpty()
+            tiers.map { it.copy(conditionType = sharedConditionType, relatedId = sharedRelatedId) }
+        } else {
+            tiers.toList()
+        }
+
         if (binding.existingCategoryRadio.isChecked) {
             val existingCategoryId = binding.existingCategoryIdInput.text?.toString()?.trim()?.toLongOrNull()
             if (existingCategoryId == null) {
@@ -277,7 +332,7 @@ class AchievementTemplateActivity : AppCompatActivity() {
                 return
             }
             val subcategoryName = TemplateSubstitution.substitute(subcategoryNameRaw, variablesMap)
-            runGenerateExisting(existingCategoryId, subcategoryName, tiers.toList(), variablesMap, skillIds)
+            runGenerateExisting(existingCategoryId, subcategoryName, tierSnapshot, variablesMap, skillIds)
         } else {
             val categoryNameRaw = binding.categoryNameInput.text?.toString()?.trim().orEmpty()
             if (categoryNameRaw.isEmpty()) {
@@ -285,7 +340,7 @@ class AchievementTemplateActivity : AppCompatActivity() {
                 return
             }
             val categoryName = TemplateSubstitution.substitute(categoryNameRaw, variablesMap)
-            runGenerateNewCategory(categoryName, tiers.toList(), variablesMap, skillIds)
+            runGenerateNewCategory(categoryName, tierSnapshot, variablesMap, skillIds)
         }
     }
 

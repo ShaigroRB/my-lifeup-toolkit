@@ -16,6 +16,9 @@ object AchievementTemplateStore {
     private const val KEY_EXISTING_CATEGORY_ID = "existingCategoryId"
     private const val KEY_SUBCATEGORY_NAME = "subcategoryName"
     private const val KEY_SKILL_IDS = "skillIds"
+    private const val KEY_USE_SHARED_CONDITION = "useSharedCondition"
+    private const val KEY_SHARED_CONDITION_TYPE = "sharedConditionType"
+    private const val KEY_SHARED_RELATED_ID_TEMPLATE = "sharedRelatedIdTemplate"
     private const val KEY_VARIABLES = "variables"
     private const val KEY_TIERS = "tiers"
     private const val KEY_VAR_KEY = "key"
@@ -63,6 +66,9 @@ object AchievementTemplateStore {
             existingCategoryId = obj.optString(KEY_EXISTING_CATEGORY_ID),
             subcategoryName = obj.optString(KEY_SUBCATEGORY_NAME),
             skillIds = obj.optString(KEY_SKILL_IDS),
+            useSharedCondition = obj.optBoolean(KEY_USE_SHARED_CONDITION, false),
+            sharedConditionType = if (obj.isNull(KEY_SHARED_CONDITION_TYPE)) null else obj.optInt(KEY_SHARED_CONDITION_TYPE),
+            sharedRelatedIdTemplate = obj.optString(KEY_SHARED_RELATED_ID_TEMPLATE),
             variables = variablesMap,
             tiers = if (tiers == null) emptyList() else (0 until tiers.length()).map { i ->
                 parseTier(tiers.getJSONObject(i))
@@ -113,6 +119,9 @@ object AchievementTemplateStore {
                     .put(KEY_EXISTING_CATEGORY_ID, template.existingCategoryId)
                     .put(KEY_SUBCATEGORY_NAME, template.subcategoryName)
                     .put(KEY_SKILL_IDS, template.skillIds)
+                    .put(KEY_USE_SHARED_CONDITION, template.useSharedCondition)
+                    .put(KEY_SHARED_CONDITION_TYPE, template.sharedConditionType ?: JSONObject.NULL)
+                    .put(KEY_SHARED_RELATED_ID_TEMPLATE, template.sharedRelatedIdTemplate)
                     .put(KEY_VARIABLES, variables)
                     .put(KEY_TIERS, tiers)
             )

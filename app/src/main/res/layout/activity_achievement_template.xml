@@ -273,6 +273,50 @@
             android:layout_height="wrap_content"
             android:text="One achievement per tier. Reference your variables with {name}, {something}, etc." />
 
+        <Switch
+            android:id="@+id/sharedConditionToggle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Use one shared unlock condition for all tiers" />
+
+        <LinearLayout
+            android:id="@+id/sharedConditionGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                style="@style/FieldLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Unlock condition" />
+
+            <Spinner
+                android:id="@+id/sharedConditionSpinner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <TextView
+                android:id="@+id/sharedRelatedIdLabel"
+                style="@style/FieldLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                tools:text="Task ID" />
+
+            <EditText
+                android:id="@+id/sharedRelatedIdInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="e.g. task id/gid"
+                android:inputType="text"
+                android:autofillHints="" />
+
+        </LinearLayout>
+
         <LinearLayout
             android:id="@+id/tierListContainer"
             android:layout_width="match_parent"
