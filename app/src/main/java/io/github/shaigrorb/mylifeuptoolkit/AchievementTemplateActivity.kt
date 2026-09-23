@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.AdapterView
+import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.doOnTextChanged
@@ -62,6 +63,7 @@ class AchievementTemplateActivity : AppCompatActivity() {
             applySharedConditionState(isChecked)
             renderTiers()
         }
+        binding.sharedPickTaskButton.setOnClickListener { showTaskPicker(binding.sharedRelatedIdInput) }
 
         loadBlank()
         renderSavedTemplateList()
@@ -161,6 +163,7 @@ class AchievementTemplateActivity : AppCompatActivity() {
         val relatedLabel = ConditionTypes.ALL.find { it.code == conditionType }?.relatedIdLabel
         binding.sharedRelatedIdInput.isEnabled = relatedLabel != null
         binding.sharedRelatedIdLabel.text = relatedLabel ?: "Related ID (n/a)"
+        binding.sharedPickTaskButton.visibility = if (ConditionTypes.isTaskBased(conditionType)) View.VISIBLE else View.GONE
     }
 
     private fun renderSavedTemplateList() {
@@ -265,6 +268,8 @@ class AchievementTemplateActivity : AppCompatActivity() {
             itemBinding.tierConditionSpinner.visibility = if (sharedMode) View.GONE else View.VISIBLE
             itemBinding.tierRelatedIdLabel.visibility = if (sharedMode) View.GONE else View.VISIBLE
             itemBinding.tierRelatedIdInput.visibility = if (sharedMode) View.GONE else View.VISIBLE
+            itemBinding.tierPickTaskButton.visibility = View.GONE
+            itemBinding.tierPickTaskButton.setOnClickListener { showTaskPicker(itemBinding.tierRelatedIdInput) }
 
             val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, conditionLabels)
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -300,6 +305,42 @@ class AchievementTemplateActivity : AppCompatActivity() {
         val relatedLabel = ConditionTypes.ALL.find { it.code == conditionType }?.relatedIdLabel
         itemBinding.tierRelatedIdInput.isEnabled = relatedLabel != null
         itemBinding.tierRelatedIdLabel.text = relatedLabel ?: "Related ID (n/a)"
+        itemBinding.tierPickTaskButton.visibility = if (ConditionTypes.isTaskBased(conditionType)) View.VISIBLE else View.GONE
+    }
+
+    private fun showTaskPicker(targetInput: EditText) {
+        val loadingDialog = AlertDialog.Builder(this)
+            .setTitle("Loading tasks…")
+            .setCancelable(false)
+            .create()
+        loadingDialog.show()
+
+        Thread {
+            val result = LifeUpBridge.listTasks(this)
+            runOnUiThread {
+                loadingDialog.dismiss()
+                result.fold(
+                    onSuccess = { tasks -> showTaskPickerResult(tasks, targetInput) },
+                    onFailure = { error ->
+                        Toast.makeText(this, error.message ?: "Failed to load tasks", Toast.LENGTH_SHORT).show()
+                    }
+                )
+            }
+        }.start()
+    }
+
+    private fun showTaskPickerResult(tasks: List<LifeUpBridge.LifeUpTask>, targetInput: EditText) {
+        val eligible = tasks.filter { it.id != null }
+        if (eligible.isEmpty()) {
+            Toast.makeText(this, "No tasks found in LifeUp", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val names = eligible.map { it.name }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle("Choose a task")
+            .setItems(names) { _, which -> targetInput.setText(eligible[which].id.toString()) }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun onGenerateClicked() {

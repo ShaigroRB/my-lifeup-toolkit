@@ -79,6 +79,16 @@
         android:autofillHints=""
         tools:text="1234" />
 
+    <Button
+        android:id="@+id/tierPickTaskButton"
+        style="?attr/borderlessButtonStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="start"
+        android:layout_marginTop="4dp"
+        android:paddingHorizontal="0dp"
+        android:text="Pick from LifeUp tasks…" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

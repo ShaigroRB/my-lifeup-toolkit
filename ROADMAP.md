@@ -28,7 +28,10 @@ field).
 - Only show/enable it when the selected condition is task-based (`ConditionTypes`
   codes `0`, `1`, `9`, `18` — completion count/streak, pomodoro count, focus
   duration), mirroring the existing `applyRelatedIdState()` enable/disable logic.
-- No new provider dependency — `listTasks()` already works.
+- No new provider dependency — `listTasks()` already works, but note it must supply
+  the task's own `id` (row id) for `related_id`, not its `gid` (recurring-group id,
+  what `complete`/`BulkCompleteActivity` use) — the two LifeUp APIs want different
+  identifiers for the same task.
 
 ## 3. Existing Category ID picker
 

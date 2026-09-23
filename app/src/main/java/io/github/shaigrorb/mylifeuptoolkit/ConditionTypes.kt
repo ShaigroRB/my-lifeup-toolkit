@@ -30,4 +30,7 @@ object ConditionTypes {
     )
 
     fun indexOf(code: Int?): Int = ALL.indexOfFirst { it.code == code }.coerceAtLeast(0)
+
+    /** True for condition codes 0, 1, 9, 18 — the ones whose related ID is a LifeUp task. */
+    fun isTaskBased(code: Int?): Boolean = ALL.find { it.code == code }?.relatedIdLabel == "Task ID"
 }

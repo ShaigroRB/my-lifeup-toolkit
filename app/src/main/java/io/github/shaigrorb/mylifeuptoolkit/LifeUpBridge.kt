@@ -16,7 +16,12 @@ object LifeUpBridge {
 
     class LifeUpCallException(val errorCode: String?, message: String?) : Exception(message)
 
-    data class LifeUpTask(val gid: Long, val name: String)
+    /**
+     * [gid] is the task's stable group id — what the `complete` API and bulk-complete profiles use.
+     * [id] is the task's own row id — what achievement conditions' `related_id` expects for
+     * task-based condition types (0, 1). Null when the provider didn't return one.
+     */
+    data class LifeUpTask(val gid: Long, val name: String, val id: Long?)
 
     fun isInstalled(context: Context): Boolean {
         return try {
@@ -85,12 +90,14 @@ object LifeUpBridge {
                         )
                     }
                     val gidIndex = cursor.getColumnIndex("_GID")
+                    val idIndex = cursor.getColumnIndex("_ID")
                     val nameIndex = cursor.getColumnIndex("name")
                     do {
                         val gid = if (gidIndex != -1) cursor.getLong(gidIndex) else null
+                        val id = if (idIndex != -1) cursor.getLong(idIndex) else null
                         val name = if (nameIndex != -1) cursor.getString(nameIndex) else null
                         if (gid != null && name != null) {
-                            tasks.add(LifeUpTask(gid, name))
+                            tasks.add(LifeUpTask(gid, name, id))
                         }
                     } while (cursor.moveToNext())
                 }
