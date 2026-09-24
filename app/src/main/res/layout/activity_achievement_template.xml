@@ -136,18 +136,18 @@
             android:layout_marginVertical="20dp"
             android:background="#E0E0E0" />
 
-        <!-- Section 3: Shared settings -->
+        <!-- Section 3: Common to all tiers -->
         <TextView
             style="@style/SectionHeader"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="3. Shared settings" />
+            android:text="3. Common to all tiers" />
 
         <TextView
             style="@style/SectionHint"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/hint_shared_settings" />
+            android:text="@string/hint_common_to_all_tiers" />
 
         <TextView
             style="@style/FieldLabel"
@@ -264,25 +264,6 @@
             android:inputType="text"
             android:autofillHints="" />
 
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginVertical="20dp"
-            android:background="#E0E0E0" />
-
-        <!-- Section 4: Tiers -->
-        <TextView
-            style="@style/SectionHeader"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="4. Tiers" />
-
-        <TextView
-            style="@style/SectionHint"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="One achievement per tier. Reference your variables with {name}, {something}, etc." />
-
         <Switch
             android:id="@+id/sharedConditionToggle"
             android:layout_width="wrap_content"
@@ -336,6 +317,25 @@
                 android:text="Pick from LifeUp tasks…" />
 
         </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginVertical="20dp"
+            android:background="#E0E0E0" />
+
+        <!-- Section 4: Tiers -->
+        <TextView
+            style="@style/SectionHeader"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="4. Tiers" />
+
+        <TextView
+            style="@style/SectionHint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="One achievement per tier. Reference your variables with {name}, {something}, etc." />
 
         <LinearLayout
             android:id="@+id/tierListContainer"

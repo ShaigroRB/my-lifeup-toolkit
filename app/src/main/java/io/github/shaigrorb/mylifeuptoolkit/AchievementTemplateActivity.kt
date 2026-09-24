@@ -8,6 +8,7 @@ import android.widget.AdapterView
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.children
 import androidx.core.widget.doOnTextChanged
 import java.util.UUID
 
@@ -151,6 +152,7 @@ class AchievementTemplateActivity : AppCompatActivity() {
         binding.sharedConditionSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 applySharedRelatedIdState(ConditionTypes.ALL[position].code)
+                updateTierSharedConditionNotes()
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
@@ -265,7 +267,9 @@ class AchievementTemplateActivity : AppCompatActivity() {
             itemBinding.tierExpInput.setText(row.exp)
             itemBinding.tierRelatedIdInput.setText(row.relatedId)
 
-            itemBinding.tierConditionLabel.visibility = if (sharedMode) View.GONE else View.VISIBLE
+            itemBinding.tierConditionLabel.text = if (sharedMode) "Unlock condition (shared)" else "Unlock condition"
+            itemBinding.tierSharedConditionNote.visibility = if (sharedMode) View.VISIBLE else View.GONE
+            itemBinding.tierSharedConditionNote.text = sharedConditionNote()
             itemBinding.tierConditionSpinner.visibility = if (sharedMode) View.GONE else View.VISIBLE
             itemBinding.tierRelatedIdLabel.visibility = if (sharedMode) View.GONE else View.VISIBLE
             itemBinding.tierRelatedIdInput.visibility = if (sharedMode) View.GONE else View.VISIBLE
@@ -300,6 +304,16 @@ class AchievementTemplateActivity : AppCompatActivity() {
 
             binding.tierListContainer.addView(itemBinding.root)
         }
+    }
+
+    private fun sharedConditionNote(): String {
+        return ConditionTypes.ALL[binding.sharedConditionSpinner.selectedItemPosition].label
+    }
+
+    /** Refreshes each tier row's read-only note when the shared condition changes, without re-rendering the rows. */
+    private fun updateTierSharedConditionNotes() {
+        val note = sharedConditionNote()
+        binding.tierListContainer.children.forEach { ItemAchievementTierBinding.bind(it).tierSharedConditionNote.text = note }
     }
 
     private fun applyRelatedIdState(itemBinding: ItemAchievementTierBinding, conditionType: Int?) {

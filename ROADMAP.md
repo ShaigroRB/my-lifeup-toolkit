@@ -9,13 +9,7 @@ screen with pickers, in priority order.
 
 ## 3. Existing Category ID picker — done
 
-## Naming: rename "Shared settings"
-
-Its actual role is "things every tier shares that LifeUp would otherwise make you
-repeat per achievement" — category, skill IDs, and (once #1 lands) the shared
-unlock condition/task ID. Worth renaming the section (e.g. to "Common to all
-tiers") so the UI itself communicates why these fields are pulled out, instead of
-reading as an arbitrary grab-bag next to the per-tier fields.
+## Naming: rename "Shared settings" — done
 
 ## 4. Skill IDs picker
 
@@ -24,7 +18,7 @@ LifeUp-SDK's `SkillsApi.listSkills(): Result<List<Skill>>` (and `listSkillGroups
 indicates skills are also queryable from the content provider.
 
 - Needs testing against the actual LifeUp provider, same caveat as #3.
-- Unlike tasks/categories, the "SKILL IDS" field (Shared settings — New category &
+- Unlike tasks/categories, the "SKILL IDS" field (Common to all tiers — New category &
   Existing category) is **multi-select** (comma-separated), so the picker UI needs
   multi-choice selection rather than the task picker's single-pick list.
 - Note: per-tier condition code `13` ("Skill level reached") also uses the
