@@ -64,6 +64,7 @@ class AchievementTemplateActivity : AppCompatActivity() {
             renderTiers()
         }
         binding.sharedPickTaskButton.setOnClickListener { showTaskPicker(binding.sharedRelatedIdInput) }
+        binding.pickCategoryButton.setOnClickListener { showCategoryPicker() }
 
         loadBlank()
         renderSavedTemplateList()
@@ -339,6 +340,40 @@ class AchievementTemplateActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle("Choose a task")
             .setItems(names) { _, which -> targetInput.setText(eligible[which].id.toString()) }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showCategoryPicker() {
+        val loadingDialog = AlertDialog.Builder(this)
+            .setTitle("Loading categories…")
+            .setCancelable(false)
+            .create()
+        loadingDialog.show()
+
+        Thread {
+            val result = LifeUpBridge.listAchievementCategories(this)
+            runOnUiThread {
+                loadingDialog.dismiss()
+                result.fold(
+                    onSuccess = { categories -> showCategoryPickerResult(categories) },
+                    onFailure = { error ->
+                        Toast.makeText(this, error.message ?: "Failed to load categories", Toast.LENGTH_SHORT).show()
+                    }
+                )
+            }
+        }.start()
+    }
+
+    private fun showCategoryPickerResult(categories: List<LifeUpBridge.LifeUpAchievementCategory>) {
+        if (categories.isEmpty()) {
+            Toast.makeText(this, "No achievement categories found in LifeUp", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val names = categories.map { it.name }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle("Choose a category")
+            .setItems(names) { _, which -> binding.existingCategoryIdInput.setText(categories[which].id.toString()) }
             .setNegativeButton("Cancel", null)
             .show()
     }

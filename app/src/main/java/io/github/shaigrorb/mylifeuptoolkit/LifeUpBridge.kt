@@ -3,6 +3,7 @@ package io.github.shaigrorb.mylifeuptoolkit
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
 import org.json.JSONArray
@@ -13,6 +14,8 @@ object LifeUpBridge {
     private const val PACKAGE_NAME = "net.sarasarasa.lifeup"
     private val PROVIDER_URI: Uri = Uri.parse("content://net.sarasarasa.lifeup.provider.api/")
     private val TASKS_URI: Uri = Uri.parse("content://net.sarasarasa.lifeup.provider.api/tasks")
+    private val ACHIEVEMENT_CATEGORIES_URI: Uri =
+        Uri.parse("content://net.sarasarasa.lifeup.provider.api/achievement_categories")
 
     class LifeUpCallException(val errorCode: String?, message: String?) : Exception(message)
 
@@ -22,6 +25,8 @@ object LifeUpBridge {
      * task-based condition types (0, 1). Null when the provider didn't return one.
      */
     data class LifeUpTask(val gid: Long, val name: String, val id: Long?)
+
+    data class LifeUpAchievementCategory(val id: Long, val name: String)
 
     fun isInstalled(context: Context): Boolean {
         return try {
@@ -79,32 +84,67 @@ object LifeUpBridge {
     fun listTasks(context: Context): Result<List<LifeUpTask>> {
         return try {
             val tasks = mutableListOf<LifeUpTask>()
-            context.contentResolver.query(TASKS_URI, null, null, null, null)?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val errorCodeIndex = cursor.getColumnIndex("error_code")
-                    if (cursor.count == 1 && errorCodeIndex != -1) {
-                        val errorMessageIndex = cursor.getColumnIndex("error_message")
-                        throw LifeUpCallException(
-                            cursor.getString(errorCodeIndex),
-                            if (errorMessageIndex != -1) cursor.getString(errorMessageIndex) else null
-                        )
+            queryRows(context, TASKS_URI) { cursor ->
+                val gidIndex = cursor.getColumnIndex("_GID")
+                val idIndex = cursor.getColumnIndex("_ID")
+                val nameIndex = cursor.getColumnIndex("name")
+                do {
+                    val gid = if (gidIndex != -1) cursor.getLong(gidIndex) else null
+                    val id = if (idIndex != -1) cursor.getLong(idIndex) else null
+                    val name = if (nameIndex != -1) cursor.getString(nameIndex) else null
+                    if (gid != null && name != null) {
+                        tasks.add(LifeUpTask(gid, name, id))
                     }
-                    val gidIndex = cursor.getColumnIndex("_GID")
-                    val idIndex = cursor.getColumnIndex("_ID")
-                    val nameIndex = cursor.getColumnIndex("name")
-                    do {
-                        val gid = if (gidIndex != -1) cursor.getLong(gidIndex) else null
-                        val id = if (idIndex != -1) cursor.getLong(idIndex) else null
-                        val name = if (nameIndex != -1) cursor.getString(nameIndex) else null
-                        if (gid != null && name != null) {
-                            tasks.add(LifeUpTask(gid, name, id))
-                        }
-                    } while (cursor.moveToNext())
-                }
+                } while (cursor.moveToNext())
             }
             Result.success(tasks.sortedBy { it.name.lowercase() })
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    /**
+     * Lists LifeUp's achievement categories via the read-only `achievement_categories`
+     * ContentProvider query (columns `_ID`/`name`, per LifeUp-SDK's `AchievementApi.listCategories`).
+     * Run off the main thread — this is a cross-process IPC call.
+     */
+    fun listAchievementCategories(context: Context): Result<List<LifeUpAchievementCategory>> {
+        return try {
+            val categories = mutableListOf<LifeUpAchievementCategory>()
+            queryRows(context, ACHIEVEMENT_CATEGORIES_URI) { cursor ->
+                val idIndex = cursor.getColumnIndex("_ID")
+                val nameIndex = cursor.getColumnIndex("name")
+                do {
+                    val id = if (idIndex != -1) cursor.getLong(idIndex) else null
+                    val name = if (nameIndex != -1) cursor.getString(nameIndex) else null
+                    if (id != null && name != null) {
+                        categories.add(LifeUpAchievementCategory(id, name))
+                    }
+                } while (cursor.moveToNext())
+            }
+            Result.success(categories.sortedBy { it.name.lowercase() })
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Queries [uri] and hands the cursor, already positioned on the first row, to [readRows].
+     * LifeUp reports errors as a single row with an `error_code` column — thrown here as
+     * [LifeUpCallException]. [readRows] isn't called for an empty result.
+     */
+    private fun queryRows(context: Context, uri: Uri, readRows: (Cursor) -> Unit) {
+        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            if (!cursor.moveToFirst()) return
+            val errorCodeIndex = cursor.getColumnIndex("error_code")
+            if (cursor.count == 1 && errorCodeIndex != -1) {
+                val errorMessageIndex = cursor.getColumnIndex("error_message")
+                throw LifeUpCallException(
+                    cursor.getString(errorCodeIndex),
+                    if (errorMessageIndex != -1) cursor.getString(errorMessageIndex) else null
+                )
+            }
+            readRows(cursor)
         }
     }
 
