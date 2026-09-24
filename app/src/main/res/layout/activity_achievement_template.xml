@@ -102,12 +102,46 @@
             android:layout_marginVertical="20dp"
             android:background="#E0E0E0" />
 
-        <!-- Section 2: Shared settings -->
+        <!-- Section 2: Variables -->
         <TextView
             style="@style/SectionHeader"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="2. Shared settings" />
+            android:text="2. Variables" />
+
+        <TextView
+            style="@style/SectionHint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Variables you can reuse in category names and tier names/descriptions below, written as {name}." />
+
+        <LinearLayout
+            android:id="@+id/variableListContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+        <Button
+            android:id="@+id/addVariableButton"
+            style="?attr/borderlessButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="start"
+            android:paddingHorizontal="0dp"
+            android:text="+ Add variable" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginVertical="20dp"
+            android:background="#E0E0E0" />
+
+        <!-- Section 3: Shared settings -->
+        <TextView
+            style="@style/SectionHeader"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="3. Shared settings" />
 
         <TextView
             style="@style/SectionHint"
@@ -229,40 +263,6 @@
             android:hint="e.g. 1, 4"
             android:inputType="text"
             android:autofillHints="" />
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginVertical="20dp"
-            android:background="#E0E0E0" />
-
-        <!-- Section 3: Variables -->
-        <TextView
-            style="@style/SectionHeader"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="3. Variables" />
-
-        <TextView
-            style="@style/SectionHint"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Variables you can reuse in tier names/descriptions below, written as {name}." />
-
-        <LinearLayout
-            android:id="@+id/variableListContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical" />
-
-        <Button
-            android:id="@+id/addVariableButton"
-            style="?attr/borderlessButtonStyle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="start"
-            android:paddingHorizontal="0dp"
-            android:text="+ Add variable" />
 
         <View
             android:layout_width="match_parent"
