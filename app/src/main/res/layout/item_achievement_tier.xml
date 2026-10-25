@@ -82,7 +82,6 @@
         android:id="@+id/tierRelatedIdInput"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="e.g. task id/gid"
         android:inputType="text"
         android:autofillHints=""
         tools:text="1234" />

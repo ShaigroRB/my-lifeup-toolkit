@@ -34,6 +34,13 @@ object ConditionTypes {
     /** True for condition codes 0, 1, 9, 18 — the ones whose related ID is a LifeUp task. */
     fun isTaskBased(code: Int?): Boolean = ALL.find { it.code == code }?.relatedIdLabel == "Task ID"
 
+    /** True when [code]'s condition takes a related ID — only then is `related_id` shown and sent. */
+    fun hasRelatedId(code: Int?): Boolean = ALL.find { it.code == code }?.relatedIdLabel != null
+
+    /** Placeholder for the related-ID field: points to the picker when [code] has one. */
+    fun relatedIdHint(code: Int?): String =
+        if (isTaskBased(code) || isSkillBased(code)) "Use the picker below, or e.g. 42" else "e.g. 42"
+
     /** True for condition code 13 — the one whose related ID is a LifeUp skill. */
     fun isSkillBased(code: Int?): Boolean = ALL.find { it.code == code }?.relatedIdLabel == "Skill ID"
 }

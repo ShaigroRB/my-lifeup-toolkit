@@ -165,8 +165,11 @@ class AchievementTemplateActivity : AppCompatActivity() {
 
     private fun applySharedRelatedIdState(conditionType: Int?) {
         val relatedLabel = ConditionTypes.ALL.find { it.code == conditionType }?.relatedIdLabel
-        binding.sharedRelatedIdInput.isEnabled = relatedLabel != null
-        binding.sharedRelatedIdLabel.text = relatedLabel ?: "Related ID (n/a)"
+        val relatedVisibility = if (relatedLabel != null) View.VISIBLE else View.GONE
+        binding.sharedRelatedIdLabel.visibility = relatedVisibility
+        binding.sharedRelatedIdInput.visibility = relatedVisibility
+        binding.sharedRelatedIdLabel.text = relatedLabel
+        binding.sharedRelatedIdInput.hint = ConditionTypes.relatedIdHint(conditionType)
         applyPickRelatedButtonState(binding.sharedPickRelatedButton, binding.sharedRelatedIdInput, conditionType)
     }
 
@@ -285,7 +288,7 @@ class AchievementTemplateActivity : AppCompatActivity() {
             itemBinding.tierConditionSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                 override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                     row.conditionType = ConditionTypes.ALL[position].code
-                    applyRelatedIdState(itemBinding, row.conditionType)
+                    if (!sharedMode) applyRelatedIdState(itemBinding, row.conditionType)
                 }
                 override fun onNothingSelected(parent: AdapterView<*>?) {}
             }
@@ -318,8 +321,11 @@ class AchievementTemplateActivity : AppCompatActivity() {
 
     private fun applyRelatedIdState(itemBinding: ItemAchievementTierBinding, conditionType: Int?) {
         val relatedLabel = ConditionTypes.ALL.find { it.code == conditionType }?.relatedIdLabel
-        itemBinding.tierRelatedIdInput.isEnabled = relatedLabel != null
-        itemBinding.tierRelatedIdLabel.text = relatedLabel ?: "Related ID (n/a)"
+        val relatedVisibility = if (relatedLabel != null) View.VISIBLE else View.GONE
+        itemBinding.tierRelatedIdLabel.visibility = relatedVisibility
+        itemBinding.tierRelatedIdInput.visibility = relatedVisibility
+        itemBinding.tierRelatedIdLabel.text = relatedLabel
+        itemBinding.tierRelatedIdInput.hint = ConditionTypes.relatedIdHint(conditionType)
         applyPickRelatedButtonState(itemBinding.tierPickRelatedButton, itemBinding.tierRelatedIdInput, conditionType)
     }
 
@@ -594,7 +600,11 @@ class AchievementTemplateActivity : AppCompatActivity() {
 
             val name = TemplateSubstitution.substitute(tier.name, variablesMap)
             val desc = TemplateSubstitution.substitute(tier.desc, variablesMap).ifBlank { null }
-            val relatedId = TemplateSubstitution.substitute(tier.relatedId, variablesMap).toLongOrNull()
+            val relatedId = if (ConditionTypes.hasRelatedId(tier.conditionType)) {
+                TemplateSubstitution.substitute(tier.relatedId, variablesMap).toLongOrNull()
+            } else {
+                null
+            }
 
             val result = LifeUpBridge.createAchievement(
                 this,
