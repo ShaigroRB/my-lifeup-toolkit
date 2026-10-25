@@ -40,6 +40,9 @@ class AchievementTemplateActivity : AppCompatActivity() {
     private val tiers = mutableListOf<TierRow>()
     private var loadedTemplateId: String? = null
 
+    /** True while [loadBlank]/[loadTemplate] fill the form, so setting the shared toggle doesn't sync tiers. */
+    private var loadingForm = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityAchievementTemplateBinding.inflate(layoutInflater)
@@ -62,6 +65,9 @@ class AchievementTemplateActivity : AppCompatActivity() {
         }
         setupSharedConditionSpinner()
         binding.sharedConditionToggle.setOnCheckedChangeListener { _, isChecked ->
+            if (!loadingForm) {
+                if (isChecked) copyTierConditionToShared() else copySharedConditionToTiers()
+            }
             applySharedConditionState(isChecked)
             renderTiers()
         }
@@ -73,6 +79,7 @@ class AchievementTemplateActivity : AppCompatActivity() {
     }
 
     private fun loadBlank() {
+        loadingForm = true
         binding.templateNameInput.setText("")
         binding.categoryNameInput.setText("")
         binding.existingCategoryIdInput.setText("")
@@ -99,9 +106,11 @@ class AchievementTemplateActivity : AppCompatActivity() {
 
         renderVariables()
         renderTiers()
+        loadingForm = false
     }
 
     private fun loadTemplate(template: AchievementTemplate) {
+        loadingForm = true
         binding.templateNameInput.setText(template.templateName)
         binding.categoryNameInput.setText(template.categoryName)
         binding.existingCategoryIdInput.setText(template.existingCategoryId)
@@ -138,6 +147,7 @@ class AchievementTemplateActivity : AppCompatActivity() {
 
         renderVariables()
         renderTiers()
+        loadingForm = false
     }
 
     private fun applyCategoryModeVisibility(useExisting: Boolean) {
@@ -156,6 +166,31 @@ class AchievementTemplateActivity : AppCompatActivity() {
                 updateTierSharedConditionNotes()
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+    }
+
+    /** Toggling shared on: the shared condition starts from tier 1's, so nothing visibly changes when tiers already agree. */
+    private fun copyTierConditionToShared() {
+        val first = tiers.firstOrNull() ?: return
+        binding.sharedConditionSpinner.setSelection(ConditionTypes.indexOf(first.conditionType))
+        binding.sharedRelatedIdInput.setText(first.relatedId)
+        applySharedRelatedIdState(first.conditionType)
+
+        val distinctConditions = tiers.map {
+            it.conditionType to (if (ConditionTypes.hasRelatedId(it.conditionType)) it.relatedId.trim() else "")
+        }.distinct()
+        if (distinctConditions.size > 1) {
+            Toast.makeText(this, "Tiers had different conditions — shared condition uses tier 1's", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    /** Toggling shared off: every tier takes the shared condition, so what was shown is what tiers keep. */
+    private fun copySharedConditionToTiers() {
+        val sharedConditionType = ConditionTypes.ALL[binding.sharedConditionSpinner.selectedItemPosition].code
+        val sharedRelatedId = binding.sharedRelatedIdInput.text?.toString().orEmpty()
+        tiers.forEach {
+            it.conditionType = sharedConditionType
+            it.relatedId = sharedRelatedId
         }
     }
 
