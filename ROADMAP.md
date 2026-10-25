@@ -22,6 +22,22 @@ item, or `items` (JSON array of `{"item_id", "amount"}`) for several — see the
 [achievement API doc](https://github.com/Ayagikei/LifeUp-SDK/blob/main/mcp/skills/lifeup-cloud/references/methods/achievement.md).
 An item picker would read LifeUp's `items` provider, like the task/skill pickers.
 
+## 6. Form errors in the "Before generating" recap
+
+The recap above the Generate button (`refreshRecap()` in
+`AchievementTemplateActivity.kt`) currently shows warnings and infos only. The form's
+blocking checks still run after tapping Generate, as toasts in `onGenerateClicked()`:
+no tiers, empty category name, invalid existing category ID, empty subcategory name.
+
+- Move those checks into the recap as an **error** severity (add an `ERROR` entry to
+  `RecapSeverity`, sorted first — e.g. a white "✕" in a red badge, red border).
+- **Disable the Generate button** while the recap has any error, so a form that
+  can't succeed can't be submitted. Warnings and infos never block.
+- The recap then needs refreshing on the fields those checks read (category mode,
+  category name, existing category ID, subcategory name), not just skills/EXP/tiers.
+- Candidate new errors once this exists: a condition that needs a related ID but has
+  none (or a non-numeric one after variable substitution).
+
 ## Deferred, not prioritized
 
 Decided against building these now; noting the reasoning so it isn't relitigated.
