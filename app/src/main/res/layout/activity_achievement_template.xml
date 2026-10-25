@@ -254,14 +254,16 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="Skill IDs for EXP reward (comma-separated, optional)" />
+            android:text="Skill IDs for EXP reward (optional)" />
 
         <EditText
             android:id="@+id/skillIdsInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="e.g. 1, 4"
-            android:inputType="text"
+            android:hint="Use the picker below"
+            android:focusable="false"
+            android:cursorVisible="false"
+            android:inputType="none"
             android:autofillHints="" />
 
         <Button

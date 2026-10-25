@@ -73,6 +73,7 @@ class AchievementTemplateActivity : AppCompatActivity() {
         }
         binding.pickCategoryButton.setOnClickListener { showCategoryPicker() }
         binding.pickSkillsButton.setOnClickListener { showSkillPicker(binding.skillIdsInput, multiSelect = true) }
+        binding.skillIdsInput.setOnClickListener { showSkillPicker(binding.skillIdsInput, multiSelect = true) }
 
         loadBlank()
         renderSavedTemplateList()
@@ -452,7 +453,7 @@ class AchievementTemplateActivity : AppCompatActivity() {
 
     /**
      * Fills [targetInput] with LifeUp skill IDs. [multiSelect] writes a comma-separated list
-     * (pre-checking IDs already in the field and keeping entries that match no skill);
+     * (pre-checking IDs already in the field and dropping entries that match no skill);
      * otherwise a single pick replaces the field.
      */
     private fun showSkillPicker(targetInput: EditText, multiSelect: Boolean) {
@@ -497,7 +498,6 @@ class AchievementTemplateActivity : AppCompatActivity() {
         val currentEntries = targetInput.text?.toString().orEmpty()
             .split(",").map { it.trim() }.filter { it.isNotEmpty() }
         val skillIds = skills.map { it.id.toString() }
-        val unmatchedEntries = currentEntries.filter { it !in skillIds }
         val checked = BooleanArray(skills.size) { skillIds[it] in currentEntries }
         val names = skills.map { it.name }.toTypedArray()
 
@@ -506,7 +506,7 @@ class AchievementTemplateActivity : AppCompatActivity() {
             .setMultiChoiceItems(names, checked) { _, which, isChecked -> checked[which] = isChecked }
             .setPositiveButton("OK") { _, _ ->
                 val picked = skillIds.filterIndexed { index, _ -> checked[index] }
-                targetInput.setText((unmatchedEntries + picked).joinToString(", "))
+                targetInput.setText(picked.joinToString(", "))
             }
             .setNegativeButton("Cancel", null)
             .show()
