@@ -1,7 +1,17 @@
 package io.github.shaigrorb.mylifeuptoolkit
 
 import android.app.AlertDialog
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.text.Spannable
+import android.text.SpannableStringBuilder
+import android.text.style.ForegroundColorSpan
+import android.text.style.LeadingMarginSpan
+import android.text.style.ReplacementSpan
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.AdapterView
@@ -34,6 +44,51 @@ class AchievementTemplateActivity : AppCompatActivity() {
         var coin: String,
         var exp: String
     )
+
+    /**
+     * Recap line severity, most severe first. [glyph] is drawn in a [textColor] circle badge,
+     * [textColor] also colors the line, [borderColor] colors the box when it's the worst one.
+     */
+    private enum class RecapSeverity(val glyph: String, val textColor: Int, val borderColor: Int) {
+        WARNING("!", 0xFF9A5B00.toInt(), 0xFFFFB74D.toInt()),
+        INFO("i", 0xFF666B60.toInt(), 0xFFE0E0E0.toInt())
+    }
+
+    /**
+     * Draws [glyph] in white inside a filled [color] circle, in place of one character.
+     * Drawn rather than taken from a font, so it looks the same on every device.
+     */
+    private class BadgeSpan(private val glyph: String, private val color: Int) : ReplacementSpan() {
+        override fun getSize(paint: Paint, text: CharSequence?, start: Int, end: Int, fm: Paint.FontMetricsInt?): Int =
+            width(paint.textSize)
+
+        override fun draw(
+            canvas: Canvas, text: CharSequence?, start: Int, end: Int,
+            x: Float, top: Int, y: Int, bottom: Int, paint: Paint
+        ) {
+            val radius = paint.textSize * 0.55f
+            val centerX = x + radius
+            val centerY = y + (paint.fontMetrics.ascent + paint.fontMetrics.descent) / 2
+            val circlePaint = Paint(paint).apply { color = this@BadgeSpan.color; style = Paint.Style.FILL; isAntiAlias = true }
+            canvas.drawCircle(centerX, centerY, radius, circlePaint)
+
+            val glyphPaint = Paint(paint).apply {
+                color = Color.WHITE
+                textAlign = Paint.Align.CENTER
+                typeface = Typeface.DEFAULT_BOLD
+                textSize = paint.textSize * 0.8f
+                isAntiAlias = true
+            }
+            canvas.drawText(glyph, centerX, centerY - (glyphPaint.fontMetrics.ascent + glyphPaint.fontMetrics.descent) / 2, glyphPaint)
+        }
+
+        companion object {
+            /** Badge diameter plus a gap before the text. */
+            fun width(textSize: Float): Int = (textSize * 1.5f).toInt()
+        }
+    }
+
+    private data class RecapLine(val severity: RecapSeverity, val text: String)
 
     private lateinit var binding: ActivityAchievementTemplateBinding
     private val variables = mutableListOf<VariableRow>()
@@ -74,6 +129,7 @@ class AchievementTemplateActivity : AppCompatActivity() {
         binding.pickCategoryButton.setOnClickListener { showCategoryPicker() }
         binding.pickSkillsButton.setOnClickListener { showSkillPicker(binding.skillIdsInput, multiSelect = true) }
         binding.skillIdsInput.setOnClickListener { showSkillPicker(binding.skillIdsInput, multiSelect = true) }
+        binding.skillIdsInput.doOnTextChanged { _, _, _, _ -> refreshRecap() }
 
         loadBlank()
         renderSavedTemplateList()
@@ -334,7 +390,10 @@ class AchievementTemplateActivity : AppCompatActivity() {
             itemBinding.tierRelatedIdInput.doOnTextChanged { text, _, _, _ -> row.relatedId = text?.toString().orEmpty() }
             itemBinding.tierTargetInput.doOnTextChanged { text, _, _, _ -> row.target = text?.toString().orEmpty() }
             itemBinding.tierCoinInput.doOnTextChanged { text, _, _, _ -> row.coin = text?.toString().orEmpty() }
-            itemBinding.tierExpInput.doOnTextChanged { text, _, _, _ -> row.exp = text?.toString().orEmpty() }
+            itemBinding.tierExpInput.doOnTextChanged { text, _, _, _ ->
+                row.exp = text?.toString().orEmpty()
+                refreshRecap()
+            }
 
             itemBinding.removeTierButton.setOnClickListener {
                 tiers.remove(row)
@@ -343,6 +402,49 @@ class AchievementTemplateActivity : AppCompatActivity() {
 
             binding.tierListContainer.addView(itemBinding.root)
         }
+        refreshRecap()
+    }
+
+    /**
+     * Lists potential problems above the Generate button. LifeUp only grants EXP through
+     * skills, so skills without EXP (or EXP without skills) rewards nothing.
+     */
+    private fun refreshRecap() {
+        val hasSkills = binding.skillIdsInput.text?.toString().orEmpty().isNotBlank()
+        val expTiers = tiers.withIndex().filter { (it.value.exp.toIntOrNull() ?: 0) > 0 }.map { it.index + 1 }
+        val lines = mutableListOf<RecapLine>()
+
+        if (hasSkills && expTiers.isEmpty()) {
+            lines.add(RecapLine(RecapSeverity.WARNING, "Skill IDs are set, but no tier has an EXP reward — the skills won't get anything."))
+        }
+        if (!hasSkills && expTiers.isNotEmpty()) {
+            val tiersText = if (expTiers.size == 1) "Tier ${expTiers[0]} has" else "Tiers ${expTiers.joinToString(", ")} have"
+            lines.add(RecapLine(RecapSeverity.WARNING, "$tiersText an EXP reward, but no skill IDs are set — LifeUp ignores EXP without skills."))
+        }
+        if (hasSkills && expTiers.isNotEmpty() && expTiers.size < tiers.size) {
+            lines.add(RecapLine(RecapSeverity.INFO, "EXP reward set on ${expTiers.size} of ${tiers.size} tiers."))
+        }
+
+        binding.recapGroup.visibility = if (lines.isEmpty()) View.GONE else View.VISIBLE
+        if (lines.isEmpty()) return
+
+        val sorted = lines.sortedBy { it.severity.ordinal }
+        val badgeWidth = BadgeSpan.width(binding.recapText.textSize)
+        val text = SpannableStringBuilder()
+        sorted.forEachIndexed { index, line ->
+            if (index > 0) text.append('\n')
+            val start = text.length
+            text.append(' ')
+            text.setSpan(BadgeSpan(line.severity.glyph, line.severity.textColor), start, start + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            text.append(line.text)
+            text.setSpan(ForegroundColorSpan(line.severity.textColor), start + 1, text.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            // Wrapped lines start under the text, not under the badge.
+            text.setSpan(LeadingMarginSpan.Standard(0, badgeWidth), start, text.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        binding.recapText.text = text
+
+        val strokeWidth = (resources.displayMetrics.density).toInt().coerceAtLeast(1)
+        (binding.recapGroup.background.mutate() as GradientDrawable).setStroke(strokeWidth, sorted.first().severity.borderColor)
     }
 
     private fun sharedConditionNote(): String {

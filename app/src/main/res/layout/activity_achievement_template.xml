@@ -369,6 +369,32 @@
             android:layout_marginVertical="20dp"
             android:background="#E0E0E0" />
 
+        <!-- Potential problems with the current form, refreshed live; hidden when there are none. -->
+        <LinearLayout
+            android:id="@+id/recapGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/bg_recap"
+            android:orientation="vertical"
+            android:padding="12dp"
+            android:visibility="gone">
+
+            <TextView
+                style="@style/FieldLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Before generating" />
+
+            <TextView
+                android:id="@+id/recapText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:lineSpacingExtra="4dp"
+                android:textSize="14sp" />
+
+        </LinearLayout>
+
         <Button
             android:id="@+id/generateButton"
             android:layout_width="match_parent"
