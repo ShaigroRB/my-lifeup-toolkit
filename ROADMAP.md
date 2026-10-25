@@ -13,13 +13,27 @@ screen with pickers, in priority order.
 
 ## 4. Skill IDs picker — done
 
+## 5. Item rewards
+
+LifeUp's "Reward" card supports rewarding items on completion, alongside
+coin/exp/skills. Not supported by the toolkit today. It's a straightforward additive
+extension of the existing reward params: `item_id`/`item_name` + `item_amount` for one
+item, or `items` (JSON array of `{"item_id", "amount"}`) for several — see the
+[achievement API doc](https://github.com/Ayagikei/LifeUp-SDK/blob/main/mcp/skills/lifeup-cloud/references/methods/achievement.md).
+An item picker would read LifeUp's `items` provider, like the task/skill pickers.
+
 ## Deferred, not prioritized
 
 Decided against building these now; noting the reasoning so it isn't relitigated.
 
-**Item rewards.** LifeUp's "Reward" card supports rewarding items on completion,
-alongside coin/exp/skills. Not supported by the toolkit today. It's a straightforward additive
-extension of the existing reward params if that changes.
+**More unlock condition types.** `ConditionTypes.kt` mirrors codes 0–20 from the
+[achievement API doc](https://github.com/Ayagikei/LifeUp-SDK/blob/main/mcp/skills/lifeup-cloud/references/methods/achievement.md)
+(§ "Unlock Condition Types"). Two documented codes are missing: `520` (complete N
+distinct tasks daily) and `524` (N task completions daily, LifeUp v1.104.4+) — trivial
+to add. The LifeUp app itself offers more conditions than the doc lists; their codes
+could be found read-only by creating an achievement with one in the app and reading
+it back through the `achievement_conditions` provider, then testing whether
+`conditions_json` accepts that code.
 
 **Multiple unlock conditions per tier.** LifeUp allows unlimited conditions per
 achievement; the toolkit models exactly one per tier (decided in favor of shipping
