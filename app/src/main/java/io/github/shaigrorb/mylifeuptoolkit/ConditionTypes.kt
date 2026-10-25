@@ -33,4 +33,7 @@ object ConditionTypes {
 
     /** True for condition codes 0, 1, 9, 18 — the ones whose related ID is a LifeUp task. */
     fun isTaskBased(code: Int?): Boolean = ALL.find { it.code == code }?.relatedIdLabel == "Task ID"
+
+    /** True for condition code 13 — the one whose related ID is a LifeUp skill. */
+    fun isSkillBased(code: Int?): Boolean = ALL.find { it.code == code }?.relatedIdLabel == "Skill ID"
 }

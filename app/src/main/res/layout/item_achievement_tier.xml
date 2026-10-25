@@ -88,7 +88,7 @@
         tools:text="1234" />
 
     <Button
-        android:id="@+id/tierPickTaskButton"
+        android:id="@+id/tierPickRelatedButton"
         style="?attr/borderlessButtonStyle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

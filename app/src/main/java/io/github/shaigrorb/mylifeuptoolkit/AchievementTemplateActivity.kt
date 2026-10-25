@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.AdapterView
+import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -64,8 +65,8 @@ class AchievementTemplateActivity : AppCompatActivity() {
             applySharedConditionState(isChecked)
             renderTiers()
         }
-        binding.sharedPickTaskButton.setOnClickListener { showTaskPicker(binding.sharedRelatedIdInput) }
         binding.pickCategoryButton.setOnClickListener { showCategoryPicker() }
+        binding.pickSkillsButton.setOnClickListener { showSkillPicker(binding.skillIdsInput, multiSelect = true) }
 
         loadBlank()
         renderSavedTemplateList()
@@ -166,7 +167,7 @@ class AchievementTemplateActivity : AppCompatActivity() {
         val relatedLabel = ConditionTypes.ALL.find { it.code == conditionType }?.relatedIdLabel
         binding.sharedRelatedIdInput.isEnabled = relatedLabel != null
         binding.sharedRelatedIdLabel.text = relatedLabel ?: "Related ID (n/a)"
-        binding.sharedPickTaskButton.visibility = if (ConditionTypes.isTaskBased(conditionType)) View.VISIBLE else View.GONE
+        applyPickRelatedButtonState(binding.sharedPickRelatedButton, binding.sharedRelatedIdInput, conditionType)
     }
 
     private fun renderSavedTemplateList() {
@@ -273,8 +274,7 @@ class AchievementTemplateActivity : AppCompatActivity() {
             itemBinding.tierConditionSpinner.visibility = if (sharedMode) View.GONE else View.VISIBLE
             itemBinding.tierRelatedIdLabel.visibility = if (sharedMode) View.GONE else View.VISIBLE
             itemBinding.tierRelatedIdInput.visibility = if (sharedMode) View.GONE else View.VISIBLE
-            itemBinding.tierPickTaskButton.visibility = View.GONE
-            itemBinding.tierPickTaskButton.setOnClickListener { showTaskPicker(itemBinding.tierRelatedIdInput) }
+            itemBinding.tierPickRelatedButton.visibility = View.GONE
 
             val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, conditionLabels)
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -320,7 +320,24 @@ class AchievementTemplateActivity : AppCompatActivity() {
         val relatedLabel = ConditionTypes.ALL.find { it.code == conditionType }?.relatedIdLabel
         itemBinding.tierRelatedIdInput.isEnabled = relatedLabel != null
         itemBinding.tierRelatedIdLabel.text = relatedLabel ?: "Related ID (n/a)"
-        itemBinding.tierPickTaskButton.visibility = if (ConditionTypes.isTaskBased(conditionType)) View.VISIBLE else View.GONE
+        applyPickRelatedButtonState(itemBinding.tierPickRelatedButton, itemBinding.tierRelatedIdInput, conditionType)
+    }
+
+    /** Shows [button] as a task or skill picker filling [targetInput], matching [conditionType]'s related ID kind. */
+    private fun applyPickRelatedButtonState(button: Button, targetInput: EditText, conditionType: Int?) {
+        when {
+            ConditionTypes.isTaskBased(conditionType) -> {
+                button.text = "Pick from LifeUp tasks…"
+                button.setOnClickListener { showTaskPicker(targetInput) }
+                button.visibility = View.VISIBLE
+            }
+            ConditionTypes.isSkillBased(conditionType) -> {
+                button.text = "Pick from LifeUp skills…"
+                button.setOnClickListener { showSkillPicker(targetInput, multiSelect = false) }
+                button.visibility = View.VISIBLE
+            }
+            else -> button.visibility = View.GONE
+        }
     }
 
     private fun showTaskPicker(targetInput: EditText) {
@@ -388,6 +405,68 @@ class AchievementTemplateActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle("Choose a category")
             .setItems(names) { _, which -> binding.existingCategoryIdInput.setText(categories[which].id.toString()) }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    /**
+     * Fills [targetInput] with LifeUp skill IDs. [multiSelect] writes a comma-separated list
+     * (pre-checking IDs already in the field and keeping entries that match no skill);
+     * otherwise a single pick replaces the field.
+     */
+    private fun showSkillPicker(targetInput: EditText, multiSelect: Boolean) {
+        val loadingDialog = AlertDialog.Builder(this)
+            .setTitle("Loading skills…")
+            .setCancelable(false)
+            .create()
+        loadingDialog.show()
+
+        Thread {
+            val result = LifeUpBridge.listSkills(this)
+            runOnUiThread {
+                loadingDialog.dismiss()
+                result.fold(
+                    onSuccess = { skills ->
+                        if (skills.isEmpty()) {
+                            Toast.makeText(this, "No skills found in LifeUp", Toast.LENGTH_SHORT).show()
+                        } else if (multiSelect) {
+                            showSkillMultiPickerResult(skills, targetInput)
+                        } else {
+                            showSkillSinglePickerResult(skills, targetInput)
+                        }
+                    },
+                    onFailure = { error ->
+                        Toast.makeText(this, error.message ?: "Failed to load skills", Toast.LENGTH_SHORT).show()
+                    }
+                )
+            }
+        }.start()
+    }
+
+    private fun showSkillSinglePickerResult(skills: List<LifeUpBridge.LifeUpSkill>, targetInput: EditText) {
+        val names = skills.map { it.name }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle("Choose a skill")
+            .setItems(names) { _, which -> targetInput.setText(skills[which].id.toString()) }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showSkillMultiPickerResult(skills: List<LifeUpBridge.LifeUpSkill>, targetInput: EditText) {
+        val currentEntries = targetInput.text?.toString().orEmpty()
+            .split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        val skillIds = skills.map { it.id.toString() }
+        val unmatchedEntries = currentEntries.filter { it !in skillIds }
+        val checked = BooleanArray(skills.size) { skillIds[it] in currentEntries }
+        val names = skills.map { it.name }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("Choose skills")
+            .setMultiChoiceItems(names, checked) { _, which, isChecked -> checked[which] = isChecked }
+            .setPositiveButton("OK") { _, _ ->
+                val picked = skillIds.filterIndexed { index, _ -> checked[index] }
+                targetInput.setText((unmatchedEntries + picked).joinToString(", "))
+            }
             .setNegativeButton("Cancel", null)
             .show()
     }

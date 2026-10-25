@@ -16,6 +16,7 @@ object LifeUpBridge {
     private val TASKS_URI: Uri = Uri.parse("content://net.sarasarasa.lifeup.provider.api/tasks")
     private val ACHIEVEMENT_CATEGORIES_URI: Uri =
         Uri.parse("content://net.sarasarasa.lifeup.provider.api/achievement_categories")
+    private val SKILLS_URI: Uri = Uri.parse("content://net.sarasarasa.lifeup.provider.api/skills")
 
     class LifeUpCallException(val errorCode: String?, message: String?) : Exception(message)
 
@@ -27,6 +28,8 @@ object LifeUpBridge {
     data class LifeUpTask(val gid: Long, val name: String, val id: Long?)
 
     data class LifeUpAchievementCategory(val id: Long, val name: String)
+
+    data class LifeUpSkill(val id: Long, val name: String)
 
     fun isInstalled(context: Context): Boolean {
         return try {
@@ -123,6 +126,31 @@ object LifeUpBridge {
                 } while (cursor.moveToNext())
             }
             Result.success(categories.sortedBy { it.name.lowercase() })
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Lists LifeUp's skills (attributes) via the read-only `skills` ContentProvider query
+     * (columns `_ID`/`name`, per LifeUp-SDK's `SkillsApi.listSkills`).
+     * Run off the main thread — this is a cross-process IPC call.
+     */
+    fun listSkills(context: Context): Result<List<LifeUpSkill>> {
+        return try {
+            val skills = mutableListOf<LifeUpSkill>()
+            queryRows(context, SKILLS_URI) { cursor ->
+                val idIndex = cursor.getColumnIndex("_ID")
+                val nameIndex = cursor.getColumnIndex("name")
+                do {
+                    val id = if (idIndex != -1) cursor.getLong(idIndex) else null
+                    val name = if (nameIndex != -1) cursor.getString(nameIndex) else null
+                    if (id != null && name != null) {
+                        skills.add(LifeUpSkill(id, name))
+                    }
+                } while (cursor.moveToNext())
+            }
+            Result.success(skills.sortedBy { it.name.lowercase() })
         } catch (e: Exception) {
             Result.failure(e)
         }

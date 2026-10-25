@@ -11,19 +11,7 @@ screen with pickers, in priority order.
 
 ## Naming: rename "Shared settings" — done
 
-## 4. Skill IDs picker
-
-LifeUp-SDK's `SkillsApi.listSkills(): Result<List<Skill>>` (and `listSkillGroups()`)
-([source](https://github.com/Ayagikei/LifeUp-SDK/blob/main/core/src/main/java/net/lifeupapp/lifeup/api/content/skills/SkillsApi.kt))
-indicates skills are also queryable from the content provider.
-
-- Needs testing against the actual LifeUp provider, same caveat as #3.
-- Unlike tasks/categories, the "SKILL IDS" field (Common to all tiers — New category &
-  Existing category) is **multi-select** (comma-separated), so the picker UI needs
-  multi-choice selection rather than the task picker's single-pick list.
-- Note: per-tier condition code `13` ("Skill level reached") also uses the
-  related-ID field for a single skill ID — worth reusing the same skill-fetching
-  code in single-select form there, rather than building it twice.
+## 4. Skill IDs picker — done
 
 ## Deferred, not prioritized
 

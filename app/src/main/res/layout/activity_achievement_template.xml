@@ -264,6 +264,16 @@
             android:inputType="text"
             android:autofillHints="" />
 
+        <Button
+            android:id="@+id/pickSkillsButton"
+            style="?attr/borderlessButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="start"
+            android:layout_marginTop="4dp"
+            android:paddingHorizontal="0dp"
+            android:text="Pick from LifeUp skills…" />
+
         <Switch
             android:id="@+id/sharedConditionToggle"
             android:layout_width="wrap_content"
@@ -307,7 +317,7 @@
                 android:autofillHints="" />
 
             <Button
-                android:id="@+id/sharedPickTaskButton"
+                android:id="@+id/sharedPickRelatedButton"
                 style="?attr/borderlessButtonStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
