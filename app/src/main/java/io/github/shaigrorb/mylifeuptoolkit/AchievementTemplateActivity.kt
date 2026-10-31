@@ -27,12 +27,15 @@ import io.github.shaigrorb.mylifeuptoolkit.databinding.ActivityAchievementTempla
 import io.github.shaigrorb.mylifeuptoolkit.databinding.DialogProgressBinding
 import io.github.shaigrorb.mylifeuptoolkit.databinding.ItemAchievementTierBinding
 import io.github.shaigrorb.mylifeuptoolkit.databinding.ItemSavedTemplateBinding
+import io.github.shaigrorb.mylifeuptoolkit.databinding.ItemTierItemRewardBinding
 import io.github.shaigrorb.mylifeuptoolkit.databinding.ItemTemplateVariableBinding
 
 class AchievementTemplateActivity : AppCompatActivity() {
 
     /** In-memory editable row — separate from the persisted [AchievementTier] so text fields stay free-form while typing. */
     private data class VariableRow(val id: String = UUID.randomUUID().toString(), var key: String, var value: String)
+
+    private data class ItemRewardRow(val itemId: Long, val itemName: String, var amount: String)
 
     private data class TierRow(
         val id: String = UUID.randomUUID().toString(),
@@ -42,7 +45,8 @@ class AchievementTemplateActivity : AppCompatActivity() {
         var relatedId: String,
         var target: String,
         var coin: String,
-        var exp: String
+        var exp: String,
+        val items: MutableList<ItemRewardRow> = mutableListOf()
     )
 
     /**
@@ -197,7 +201,10 @@ class AchievementTemplateActivity : AppCompatActivity() {
                     relatedId = it.relatedIdTemplate,
                     target = it.target?.toString() ?: "",
                     coin = it.coin?.toString() ?: "",
-                    exp = it.exp?.toString() ?: ""
+                    exp = it.exp?.toString() ?: "",
+                    items = it.items.map { item ->
+                        ItemRewardRow(item.itemId, item.itemName, item.amount.toString())
+                    }.toMutableList()
                 )
             }
         )
@@ -326,10 +333,15 @@ class AchievementTemplateActivity : AppCompatActivity() {
                     relatedIdTemplate = it.relatedId,
                     target = it.target.toIntOrNull(),
                     coin = it.coin.toIntOrNull(),
-                    exp = it.exp.toIntOrNull()
+                    exp = it.exp.toIntOrNull(),
+                    items = it.toItemRewards()
                 )
             }
         )
+    }
+
+    private fun TierRow.toItemRewards(): List<AchievementItemReward> = items.map {
+        AchievementItemReward(it.itemId, it.itemName, AchievementItemReward.parseAmount(it.amount))
     }
 
     private fun renderVariables() {
@@ -395,6 +407,11 @@ class AchievementTemplateActivity : AppCompatActivity() {
                 refreshRecap()
             }
 
+            renderTierItems(itemBinding, row)
+            itemBinding.tierAddItemButton.setOnClickListener {
+                showItemPicker(row) { renderTierItems(itemBinding, row) }
+            }
+
             itemBinding.removeTierButton.setOnClickListener {
                 tiers.remove(row)
                 renderTiers()
@@ -403,6 +420,22 @@ class AchievementTemplateActivity : AppCompatActivity() {
             binding.tierListContainer.addView(itemBinding.root)
         }
         refreshRecap()
+    }
+
+    /** Re-renders only [row]'s item rewards, so adding or removing one keeps the rest of the form as it is. */
+    private fun renderTierItems(tierBinding: ItemAchievementTierBinding, row: TierRow) {
+        tierBinding.tierItemsContainer.removeAllViews()
+        row.items.forEach { item ->
+            val itemBinding = ItemTierItemRewardBinding.inflate(layoutInflater, tierBinding.tierItemsContainer, false)
+            itemBinding.itemRewardName.text = item.itemName
+            itemBinding.itemRewardAmountInput.setText(item.amount)
+            itemBinding.itemRewardAmountInput.doOnTextChanged { text, _, _, _ -> item.amount = text?.toString().orEmpty() }
+            itemBinding.removeItemRewardButton.setOnClickListener {
+                row.items.remove(item)
+                renderTierItems(tierBinding, row)
+            }
+            tierBinding.tierItemsContainer.addView(itemBinding.root)
+        }
     }
 
     /**
@@ -614,6 +647,60 @@ class AchievementTemplateActivity : AppCompatActivity() {
             .show()
     }
 
+    private fun showItemPicker(row: TierRow, onChanged: () -> Unit) {
+        val loadingDialog = AlertDialog.Builder(this)
+            .setTitle("Loading items…")
+            .setCancelable(false)
+            .create()
+        loadingDialog.show()
+
+        Thread {
+            val result = LifeUpBridge.listItems(this)
+            runOnUiThread {
+                loadingDialog.dismiss()
+                result.fold(
+                    onSuccess = { items ->
+                        if (items.isEmpty()) {
+                            Toast.makeText(this, "No items found in LifeUp", Toast.LENGTH_SHORT).show()
+                        } else {
+                            showItemPickerResult(items, row, onChanged)
+                        }
+                    },
+                    onFailure = { error ->
+                        Toast.makeText(this, error.message ?: "Failed to load items", Toast.LENGTH_SHORT).show()
+                    }
+                )
+            }
+        }.start()
+    }
+
+    /**
+     * Lists [row]'s items first, so they're visible without scrolling. Rows of items that are
+     * still checked keep their amount, and rows of items no longer in LifeUp are left alone,
+     * since they aren't listed here to uncheck.
+     */
+    private fun showItemPickerResult(items: List<LifeUpBridge.LifeUpItem>, row: TierRow, onChanged: () -> Unit) {
+        val currentIds = row.items.map { it.itemId }
+        val ordered = items.sortedByDescending { it.id in currentIds }
+        val checked = BooleanArray(ordered.size) { ordered[it].id in currentIds }
+        val names = ordered.map { it.name }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("Choose items")
+            .setMultiChoiceItems(names, checked) { _, which, isChecked -> checked[which] = isChecked }
+            .setPositiveButton("OK") { _, _ ->
+                val picked = ordered.filterIndexed { index, _ -> checked[index] }
+                val pickedIds = picked.map { it.id }
+                val listedIds = ordered.map { it.id }
+                row.items.removeAll { it.itemId in listedIds && it.itemId !in pickedIds }
+                picked.filter { it.id !in currentIds }
+                    .forEach { row.items.add(ItemRewardRow(it.id, it.name, amount = "1")) }
+                onChanged()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
     private fun onGenerateClicked() {
         if (tiers.isEmpty()) {
             Toast.makeText(this, "Add at least one tier", Toast.LENGTH_SHORT).show()
@@ -753,7 +840,8 @@ class AchievementTemplateActivity : AppCompatActivity() {
                 tier.target.toIntOrNull(),
                 tier.coin.toIntOrNull(),
                 tier.exp.toIntOrNull(),
-                skillIds.ifEmpty { null }
+                skillIds.ifEmpty { null },
+                tier.toItemRewards()
             )
 
             if (result.isFailure) {

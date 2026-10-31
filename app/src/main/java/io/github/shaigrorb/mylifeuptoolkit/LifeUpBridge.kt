@@ -17,6 +17,7 @@ object LifeUpBridge {
     private val ACHIEVEMENT_CATEGORIES_URI: Uri =
         Uri.parse("content://net.sarasarasa.lifeup.provider.api/achievement_categories")
     private val SKILLS_URI: Uri = Uri.parse("content://net.sarasarasa.lifeup.provider.api/skills")
+    private val ITEMS_URI: Uri = Uri.parse("content://net.sarasarasa.lifeup.provider.api/items")
 
     class LifeUpCallException(val errorCode: String?, message: String?) : Exception(message)
 
@@ -30,6 +31,8 @@ object LifeUpBridge {
     data class LifeUpAchievementCategory(val id: Long, val name: String)
 
     data class LifeUpSkill(val id: Long, val name: String)
+
+    data class LifeUpItem(val id: Long, val name: String)
 
     fun isInstalled(context: Context): Boolean {
         return try {
@@ -157,6 +160,31 @@ object LifeUpBridge {
     }
 
     /**
+     * Lists LifeUp's shop items via the read-only `items` ContentProvider query
+     * (columns `_ID`/`name`, per LifeUp-SDK's `ItemsApi.listItems`).
+     * Run off the main thread — this is a cross-process IPC call.
+     */
+    fun listItems(context: Context): Result<List<LifeUpItem>> {
+        return try {
+            val items = mutableListOf<LifeUpItem>()
+            queryRows(context, ITEMS_URI) { cursor ->
+                val idIndex = cursor.getColumnIndex("_ID")
+                val nameIndex = cursor.getColumnIndex("name")
+                do {
+                    val id = if (idIndex != -1) cursor.getLong(idIndex) else null
+                    val name = if (nameIndex != -1) cursor.getString(nameIndex) else null
+                    if (id != null && name != null) {
+                        items.add(LifeUpItem(id, name))
+                    }
+                } while (cursor.moveToNext())
+            }
+            Result.success(items.sortedBy { it.name.lowercase() })
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
      * Queries [uri] and hands the cursor, already positioned on the first row, to [readRows].
      * LifeUp reports errors as a single row with an `error_code` column — thrown here as
      * [LifeUpCallException]. [readRows] isn't called for an empty result.
@@ -210,7 +238,8 @@ object LifeUpBridge {
         target: Int?,
         coin: Int?,
         exp: Int?,
-        skillIds: List<Long>?
+        skillIds: List<Long>?,
+        items: List<AchievementItemReward>
     ): Result<Long> {
         return try {
             val params = StringBuilder()
@@ -231,6 +260,11 @@ object LifeUpBridge {
             if (coin != null) append("coin", coin.toString())
             if (exp != null) append("exp", exp.toString())
             skillIds?.forEach { append("skills", it.toString()) }
+            if (items.isNotEmpty()) {
+                val itemsJson = JSONArray()
+                items.forEach { itemsJson.put(JSONObject().put("item_id", it.itemId).put("amount", it.amount)) }
+                append("items", itemsJson.toString())
+            }
 
             Result.success(extractId(call(context, "achievement", params.toString()), "achievement"))
         } catch (e: Exception) {

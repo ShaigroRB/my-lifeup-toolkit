@@ -173,6 +173,28 @@
 
     </LinearLayout>
 
+    <TextView
+        style="@style/FieldLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="Item rewards" />
+
+    <LinearLayout
+        android:id="@+id/tierItemsContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+
+    <Button
+        android:id="@+id/tierAddItemButton"
+        style="?attr/borderlessButtonStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="start"
+        android:paddingHorizontal="0dp"
+        android:text="Choose items from LifeUp…" />
+
     <Button
         android:id="@+id/removeTierButton"
         style="?attr/borderlessButtonStyle"

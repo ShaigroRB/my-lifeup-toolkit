@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical">
+
+    <TextView
+        android:id="@+id/itemRewardName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textSize="14sp"
+        tools:text="Treasure chest" />
+
+    <EditText
+        android:id="@+id/itemRewardAmountInput"
+        android:layout_width="56dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:gravity="center_horizontal"
+        android:hint="1"
+        android:inputType="number"
+        android:maxLength="2"
+        android:autofillHints=""
+        tools:text="2" />
+
+    <ImageButton
+        android:id="@+id/removeItemRewardButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Remove item"
+        android:padding="10dp"
+        android:src="@android:drawable/ic_menu_delete" />
+
+</LinearLayout>

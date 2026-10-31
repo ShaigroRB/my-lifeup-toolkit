@@ -56,7 +56,7 @@ instead of manually recreating each achievement in LifeUp one at a time.
   placeholders (e.g. `{name}`, `{something}`), and a list of tiers, each
   with its own name/description template, unlock condition (task
   completion count, streaks, coins, skill level, and the rest of LifeUp's
-  ~20 condition types), target, and coin/EXP reward.
+  ~20 condition types), target, and coin/EXP/item rewards.
 - Save templates locally (on-device only, nothing is sent anywhere) and
   reload them later to reuse the same shape for a different habit — just
   swap the variable values.

@@ -30,6 +30,10 @@ object AchievementTemplateStore {
     private const val KEY_TARGET = "target"
     private const val KEY_COIN = "coin"
     private const val KEY_EXP = "exp"
+    private const val KEY_ITEMS = "items"
+    private const val KEY_ITEM_ID = "itemId"
+    private const val KEY_ITEM_NAME = "itemName"
+    private const val KEY_ITEM_AMOUNT = "amount"
 
     fun getAll(context: Context): List<AchievementTemplate> {
         val json = prefs(context).getString(KEY_TEMPLATES, null) ?: return emptyList()
@@ -77,6 +81,7 @@ object AchievementTemplateStore {
     }
 
     private fun parseTier(obj: JSONObject): AchievementTier {
+        val items = obj.optJSONArray(KEY_ITEMS)
         return AchievementTier(
             id = obj.optString(KEY_ID).ifEmpty { java.util.UUID.randomUUID().toString() },
             nameTemplate = obj.getString(KEY_NAME_TEMPLATE),
@@ -85,7 +90,18 @@ object AchievementTemplateStore {
             relatedIdTemplate = obj.optString(KEY_RELATED_ID_TEMPLATE),
             target = if (obj.isNull(KEY_TARGET)) null else obj.optInt(KEY_TARGET),
             coin = if (obj.isNull(KEY_COIN)) null else obj.optInt(KEY_COIN),
-            exp = if (obj.isNull(KEY_EXP)) null else obj.optInt(KEY_EXP)
+            exp = if (obj.isNull(KEY_EXP)) null else obj.optInt(KEY_EXP),
+            items = if (items == null) emptyList() else (0 until items.length()).map { i ->
+                parseItemReward(items.getJSONObject(i))
+            }
+        )
+    }
+
+    private fun parseItemReward(obj: JSONObject): AchievementItemReward {
+        return AchievementItemReward(
+            itemId = obj.getLong(KEY_ITEM_ID),
+            itemName = obj.optString(KEY_ITEM_NAME),
+            amount = obj.optInt(KEY_ITEM_AMOUNT, 1)
         )
     }
 
@@ -97,6 +113,16 @@ object AchievementTemplateStore {
 
             val tiers = JSONArray()
             template.tiers.forEach { tier ->
+                val items = JSONArray()
+                tier.items.forEach { item ->
+                    items.put(
+                        JSONObject()
+                            .put(KEY_ITEM_ID, item.itemId)
+                            .put(KEY_ITEM_NAME, item.itemName)
+                            .put(KEY_ITEM_AMOUNT, item.amount)
+                    )
+                }
+
                 tiers.put(
                     JSONObject()
                         .put(KEY_ID, tier.id)
@@ -107,6 +133,7 @@ object AchievementTemplateStore {
                         .put(KEY_TARGET, tier.target ?: JSONObject.NULL)
                         .put(KEY_COIN, tier.coin ?: JSONObject.NULL)
                         .put(KEY_EXP, tier.exp ?: JSONObject.NULL)
+                        .put(KEY_ITEMS, items)
                 )
             }
 

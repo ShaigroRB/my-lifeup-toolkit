@@ -13,14 +13,7 @@ screen with pickers, in priority order.
 
 ## 4. Skill IDs picker — done
 
-## 5. Item rewards
-
-LifeUp's "Reward" card supports rewarding items on completion, alongside
-coin/exp/skills. Not supported by the toolkit today. It's a straightforward additive
-extension of the existing reward params: `item_id`/`item_name` + `item_amount` for one
-item, or `items` (JSON array of `{"item_id", "amount"}`) for several — see the
-[achievement API doc](https://github.com/Ayagikei/LifeUp-SDK/blob/main/mcp/skills/lifeup-cloud/references/methods/achievement.md).
-An item picker would read LifeUp's `items` provider, like the task/skill pickers.
+## 5. Item rewards — done
 
 ## 6. Form errors in the "Before generating" recap
 
