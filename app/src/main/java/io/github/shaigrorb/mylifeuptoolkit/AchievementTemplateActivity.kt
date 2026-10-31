@@ -54,6 +54,7 @@ class AchievementTemplateActivity : AppCompatActivity() {
      * [textColor] also colors the line, [borderColor] colors the box when it's the worst one.
      */
     private enum class RecapSeverity(val glyph: String, val textColor: Int, val borderColor: Int) {
+        ERROR("✕", 0xFFB3261E.toInt(), 0xFFE57373.toInt()),
         WARNING("!", 0xFF9A5B00.toInt(), 0xFFFFB74D.toInt()),
         INFO("i", 0xFF666B60.toInt(), 0xFFE0E0E0.toInt())
     }
@@ -121,6 +122,7 @@ class AchievementTemplateActivity : AppCompatActivity() {
         binding.generateButton.setOnClickListener { onGenerateClicked() }
         binding.categoryModeGroup.setOnCheckedChangeListener { _, checkedId ->
             applyCategoryModeVisibility(checkedId == binding.existingCategoryRadio.id)
+            refreshRecap()
         }
         setupSharedConditionSpinner()
         binding.sharedConditionToggle.setOnCheckedChangeListener { _, isChecked ->
@@ -133,7 +135,13 @@ class AchievementTemplateActivity : AppCompatActivity() {
         binding.pickCategoryButton.setOnClickListener { showCategoryPicker() }
         binding.pickSkillsButton.setOnClickListener { showSkillPicker(binding.skillIdsInput, multiSelect = true) }
         binding.skillIdsInput.setOnClickListener { showSkillPicker(binding.skillIdsInput, multiSelect = true) }
-        binding.skillIdsInput.doOnTextChanged { _, _, _, _ -> refreshRecap() }
+        listOf(
+            binding.skillIdsInput,
+            binding.categoryNameInput,
+            binding.existingCategoryIdInput,
+            binding.subcategoryNameInput,
+            binding.sharedRelatedIdInput
+        ).forEach { input -> input.doOnTextChanged { _, _, _, _ -> refreshRecap() } }
 
         loadBlank()
         renderSavedTemplateList()
@@ -228,6 +236,7 @@ class AchievementTemplateActivity : AppCompatActivity() {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 applySharedRelatedIdState(ConditionTypes.ALL[position].code)
                 updateTierSharedConditionNotes()
+                refreshRecap()
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
@@ -323,7 +332,7 @@ class AchievementTemplateActivity : AppCompatActivity() {
             useSharedCondition = binding.sharedConditionToggle.isChecked,
             sharedConditionType = ConditionTypes.ALL[binding.sharedConditionSpinner.selectedItemPosition].code,
             sharedRelatedIdTemplate = binding.sharedRelatedIdInput.text?.toString().orEmpty(),
-            variables = variables.filter { it.key.isNotBlank() }.associate { it.key to it.value },
+            variables = currentVariables(),
             tiers = tiers.map {
                 AchievementTier(
                     id = it.id,
@@ -350,14 +359,21 @@ class AchievementTemplateActivity : AppCompatActivity() {
             val itemBinding = ItemTemplateVariableBinding.inflate(layoutInflater, binding.variableListContainer, false)
             itemBinding.variableKeyInput.setText(row.key)
             itemBinding.variableValueInput.setText(row.value)
-            itemBinding.variableKeyInput.doOnTextChanged { text, _, _, _ -> row.key = text?.toString().orEmpty() }
-            itemBinding.variableValueInput.doOnTextChanged { text, _, _, _ -> row.value = text?.toString().orEmpty() }
+            itemBinding.variableKeyInput.doOnTextChanged { text, _, _, _ ->
+                row.key = text?.toString().orEmpty()
+                refreshRecap()
+            }
+            itemBinding.variableValueInput.doOnTextChanged { text, _, _, _ ->
+                row.value = text?.toString().orEmpty()
+                refreshRecap()
+            }
             itemBinding.removeVariableButton.setOnClickListener {
                 variables.remove(row)
                 renderVariables()
             }
             binding.variableListContainer.addView(itemBinding.root)
         }
+        refreshRecap()
     }
 
     private fun renderTiers() {
@@ -393,15 +409,28 @@ class AchievementTemplateActivity : AppCompatActivity() {
                 override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                     row.conditionType = ConditionTypes.ALL[position].code
                     if (!sharedMode) applyRelatedIdState(itemBinding, row.conditionType)
+                    refreshRecap()
                 }
                 override fun onNothingSelected(parent: AdapterView<*>?) {}
             }
 
-            itemBinding.tierNameInput.doOnTextChanged { text, _, _, _ -> row.name = text?.toString().orEmpty() }
+            itemBinding.tierNameInput.doOnTextChanged { text, _, _, _ ->
+                row.name = text?.toString().orEmpty()
+                refreshRecap()
+            }
             itemBinding.tierDescInput.doOnTextChanged { text, _, _, _ -> row.desc = text?.toString().orEmpty() }
-            itemBinding.tierRelatedIdInput.doOnTextChanged { text, _, _, _ -> row.relatedId = text?.toString().orEmpty() }
-            itemBinding.tierTargetInput.doOnTextChanged { text, _, _, _ -> row.target = text?.toString().orEmpty() }
-            itemBinding.tierCoinInput.doOnTextChanged { text, _, _, _ -> row.coin = text?.toString().orEmpty() }
+            itemBinding.tierRelatedIdInput.doOnTextChanged { text, _, _, _ ->
+                row.relatedId = text?.toString().orEmpty()
+                refreshRecap()
+            }
+            itemBinding.tierTargetInput.doOnTextChanged { text, _, _, _ ->
+                row.target = text?.toString().orEmpty()
+                refreshRecap()
+            }
+            itemBinding.tierCoinInput.doOnTextChanged { text, _, _, _ ->
+                row.coin = text?.toString().orEmpty()
+                refreshRecap()
+            }
             itemBinding.tierExpInput.doOnTextChanged { text, _, _, _ ->
                 row.exp = text?.toString().orEmpty()
                 refreshRecap()
@@ -436,27 +465,17 @@ class AchievementTemplateActivity : AppCompatActivity() {
             }
             tierBinding.tierItemsContainer.addView(itemBinding.root)
         }
+        refreshRecap()
     }
 
     /**
-     * Lists potential problems above the Generate button. LifeUp only grants EXP through
-     * skills, so skills without EXP (or EXP without skills) rewards nothing.
+     * Lists problems above the Generate button, which stays disabled while any is an error.
+     * Errors are forms that can't succeed, or that LifeUp would quietly change. Warnings and
+     * infos are valid but look unintended, so they never block.
      */
     private fun refreshRecap() {
-        val hasSkills = binding.skillIdsInput.text?.toString().orEmpty().isNotBlank()
-        val expTiers = tiers.withIndex().filter { (it.value.exp.toIntOrNull() ?: 0) > 0 }.map { it.index + 1 }
-        val lines = mutableListOf<RecapLine>()
-
-        if (hasSkills && expTiers.isEmpty()) {
-            lines.add(RecapLine(RecapSeverity.WARNING, "Skill IDs are set, but no tier has an EXP reward — the skills won't get anything."))
-        }
-        if (!hasSkills && expTiers.isNotEmpty()) {
-            val tiersText = if (expTiers.size == 1) "Tier ${expTiers[0]} has" else "Tiers ${expTiers.joinToString(", ")} have"
-            lines.add(RecapLine(RecapSeverity.WARNING, "$tiersText an EXP reward, but no skill IDs are set — LifeUp ignores EXP without skills."))
-        }
-        if (hasSkills && expTiers.isNotEmpty() && expTiers.size < tiers.size) {
-            lines.add(RecapLine(RecapSeverity.INFO, "EXP reward set on ${expTiers.size} of ${tiers.size} tiers."))
-        }
+        val lines = recapErrors() + recapWarnings() + recapInfos()
+        binding.generateButton.isEnabled = lines.none { it.severity == RecapSeverity.ERROR }
 
         binding.recapGroup.visibility = if (lines.isEmpty()) View.GONE else View.VISIBLE
         if (lines.isEmpty()) return
@@ -478,6 +497,111 @@ class AchievementTemplateActivity : AppCompatActivity() {
 
         val strokeWidth = (resources.displayMetrics.density).toInt().coerceAtLeast(1)
         (binding.recapGroup.background.mutate() as GradientDrawable).setStroke(strokeWidth, sorted.first().severity.borderColor)
+    }
+
+    private fun recapErrors(): List<RecapLine> {
+        val errors = mutableListOf<String>()
+        if (binding.existingCategoryRadio.isChecked) {
+            if (binding.existingCategoryIdInput.text?.toString()?.trim()?.toLongOrNull() == null) {
+                errors.add("Choose an existing category.")
+            }
+            if (binding.subcategoryNameInput.text?.toString().isNullOrBlank()) errors.add("Enter a subcategory name.")
+        } else if (binding.categoryNameInput.text?.toString().isNullOrBlank()) {
+            errors.add("Enter an achievement category name.")
+        }
+        if (tiers.isEmpty()) errors.add("Add at least one tier.")
+
+        val effective = effectiveTiers()
+        val unnamed = tierNumbers(effective) { it.name.isBlank() }
+        if (unnamed.isNotEmpty()) errors.add("${tiersHave(unnamed)} no name.")
+
+        val variablesMap = currentVariables()
+        val badRelatedId = effective.withIndex().filter { (_, tier) ->
+            ConditionTypes.hasRelatedId(tier.conditionType) &&
+                TemplateSubstitution.substitute(tier.relatedId, variablesMap).trim().toLongOrNull() == null
+        }
+        if (binding.sharedConditionToggle.isChecked) {
+            badRelatedId.firstOrNull()?.let { (_, tier) ->
+                errors.add("The shared unlock condition needs a valid ${relatedIdLabel(tier)}.")
+            }
+        } else {
+            badRelatedId.groupBy { relatedIdLabel(it.value) }.forEach { (label, group) ->
+                errors.add("${tiersHave(group.map { it.index + 1 })} no valid $label.")
+            }
+        }
+
+        // LifeUp drops a condition sent without a target.
+        val noTarget = tierNumbers(effective) { it.conditionType != null && it.target.toIntOrNull() == null }
+        if (noTarget.isNotEmpty()) errors.add("${tiersHave(noTarget)} no target value.")
+
+        return errors.map { RecapLine(RecapSeverity.ERROR, it) }
+    }
+
+    /** LifeUp only grants EXP through skills, so skills without EXP (or EXP without skills) rewards nothing. */
+    private fun recapWarnings(): List<RecapLine> {
+        val warnings = mutableListOf<String>()
+        val hasSkills = binding.skillIdsInput.text?.toString().orEmpty().isNotBlank()
+        val expTiers = tierNumbers(tiers, ::hasExpReward)
+        if (hasSkills && expTiers.isEmpty()) {
+            warnings.add("Skill IDs are set, but no tier has an EXP reward — the skills won't get anything.")
+        }
+        if (!hasSkills && expTiers.isNotEmpty()) {
+            warnings.add("${tiersHave(expTiers)} an EXP reward, but no skill IDs are set — LifeUp ignores EXP without skills.")
+        }
+
+        val noCondition = tierNumbers(effectiveTiers()) { it.conditionType == null }
+        if (noCondition.isNotEmpty()) {
+            if (binding.sharedConditionToggle.isChecked) {
+                warnings.add("The shared unlock condition is \"No condition\" — these can only be unlocked manually.")
+            } else {
+                warnings.add("${tiersHave(noCondition)} no unlock condition — only a manual unlock will work.")
+            }
+        }
+        return warnings.map { RecapLine(RecapSeverity.WARNING, it) }
+    }
+
+    /** A reward that stops or skips a tier partway up the ladder usually wasn't meant to. */
+    private fun recapInfos(): List<RecapLine> {
+        val rewards = listOf<Pair<String, (TierRow) -> Boolean>>(
+            "Coin reward" to { (it.coin.toIntOrNull() ?: 0) > 0 },
+            "EXP reward" to ::hasExpReward,
+            "Item reward" to { it.items.isNotEmpty() }
+        )
+        return rewards.mapNotNull { (label, hasReward) ->
+            val first = tiers.indexOfFirst(hasReward)
+            val missing = if (first == -1) emptyList() else {
+                (first + 1 until tiers.size).filterNot { hasReward(tiers[it]) }.map { it + 1 }
+            }
+            if (missing.isEmpty()) return@mapNotNull null
+            val tierWord = if (missing.size == 1) "tier" else "tiers"
+            RecapLine(
+                RecapSeverity.INFO,
+                "$label is set from tier ${first + 1}, but missing on $tierWord ${missing.joinToString(", ")}."
+            )
+        }
+    }
+
+    private fun hasExpReward(tier: TierRow): Boolean = (tier.exp.toIntOrNull() ?: 0) > 0
+
+    /** The 1-based numbers of the tiers matching [predicate]. */
+    private fun tierNumbers(tiers: List<TierRow>, predicate: (TierRow) -> Boolean): List<Int> =
+        tiers.withIndex().filter { predicate(it.value) }.map { it.index + 1 }
+
+    private fun tiersHave(numbers: List<Int>): String =
+        if (numbers.size == 1) "Tier ${numbers[0]} has" else "Tiers ${numbers.joinToString(", ")} have"
+
+    private fun relatedIdLabel(tier: TierRow): String? =
+        ConditionTypes.ALL.find { it.code == tier.conditionType }?.relatedIdLabel
+
+    private fun currentVariables(): Map<String, String> =
+        variables.filter { it.key.isNotBlank() }.associate { it.key to it.value }
+
+    /** [tiers] as they'll be generated: with the shared condition applied when it's on. */
+    private fun effectiveTiers(): List<TierRow> {
+        if (!binding.sharedConditionToggle.isChecked) return tiers.toList()
+        val sharedConditionType = ConditionTypes.ALL[binding.sharedConditionSpinner.selectedItemPosition].code
+        val sharedRelatedId = binding.sharedRelatedIdInput.text?.toString().orEmpty()
+        return tiers.map { it.copy(conditionType = sharedConditionType, relatedId = sharedRelatedId) }
     }
 
     private fun sharedConditionNote(): String {
@@ -701,43 +825,20 @@ class AchievementTemplateActivity : AppCompatActivity() {
             .show()
     }
 
+    /** The Generate button is disabled until [recapErrors] is empty, so the form is valid here. */
     private fun onGenerateClicked() {
-        if (tiers.isEmpty()) {
-            Toast.makeText(this, "Add at least one tier", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val variablesMap = variables.filter { it.key.isNotBlank() }.associate { it.key to it.value }
+        val variablesMap = currentVariables()
         val skillIds = binding.skillIdsInput.text?.toString().orEmpty()
             .split(",").map { it.trim() }.filter { it.isNotEmpty() }.mapNotNull { it.toLongOrNull() }
-
-        val tierSnapshot = if (binding.sharedConditionToggle.isChecked) {
-            val sharedConditionType = ConditionTypes.ALL[binding.sharedConditionSpinner.selectedItemPosition].code
-            val sharedRelatedId = binding.sharedRelatedIdInput.text?.toString().orEmpty()
-            tiers.map { it.copy(conditionType = sharedConditionType, relatedId = sharedRelatedId) }
-        } else {
-            tiers.toList()
-        }
+        val tierSnapshot = effectiveTiers()
 
         if (binding.existingCategoryRadio.isChecked) {
-            val existingCategoryId = binding.existingCategoryIdInput.text?.toString()?.trim()?.toLongOrNull()
-            if (existingCategoryId == null) {
-                Toast.makeText(this, "Enter a valid existing category ID", Toast.LENGTH_SHORT).show()
-                return
-            }
+            val existingCategoryId = binding.existingCategoryIdInput.text?.toString()?.trim()?.toLongOrNull() ?: return
             val subcategoryNameRaw = binding.subcategoryNameInput.text?.toString()?.trim().orEmpty()
-            if (subcategoryNameRaw.isEmpty()) {
-                Toast.makeText(this, "Enter a subcategory name", Toast.LENGTH_SHORT).show()
-                return
-            }
             val subcategoryName = TemplateSubstitution.substitute(subcategoryNameRaw, variablesMap)
             runGenerateExisting(existingCategoryId, subcategoryName, tierSnapshot, variablesMap, skillIds)
         } else {
             val categoryNameRaw = binding.categoryNameInput.text?.toString()?.trim().orEmpty()
-            if (categoryNameRaw.isEmpty()) {
-                Toast.makeText(this, "Enter an achievement category name", Toast.LENGTH_SHORT).show()
-                return
-            }
             val categoryName = TemplateSubstitution.substitute(categoryNameRaw, variablesMap)
             runGenerateNewCategory(categoryName, tierSnapshot, variablesMap, skillIds)
         }
@@ -825,7 +926,7 @@ class AchievementTemplateActivity : AppCompatActivity() {
             val name = TemplateSubstitution.substitute(tier.name, variablesMap)
             val desc = TemplateSubstitution.substitute(tier.desc, variablesMap).ifBlank { null }
             val relatedId = if (ConditionTypes.hasRelatedId(tier.conditionType)) {
-                TemplateSubstitution.substitute(tier.relatedId, variablesMap).toLongOrNull()
+                TemplateSubstitution.substitute(tier.relatedId, variablesMap).trim().toLongOrNull()
             } else {
                 null
             }
